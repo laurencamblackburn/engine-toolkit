@@ -13,8 +13,9 @@ import (
 )
 
 func main() {
-	http.HandleFunc("/experiments/engine-toolkit", handleIndex())
-	http.Handle("/experiments/engine-toolkit/static/", http.StripPrefix("/experiments/engine-toolkit/static/", http.FileServer(http.Dir("static"))))
+	http.Handle("/experiments/engine-toolkit", http.RedirectHandler("/veritone/engine-toolkit", http.StatusMovedPermanently))
+	http.HandleFunc("/veritone/engine-toolkit", handleIndex())
+	http.Handle("/veritone/engine-toolkit/static/", http.StripPrefix("/veritone/engine-toolkit/static/", http.FileServer(http.Dir("static"))))
 	addr := "0.0.0.0:" + os.Getenv("PORT")
 	log.Println("listening on", addr)
 	if err := http.ListenAndServe(addr, nil); err != nil {

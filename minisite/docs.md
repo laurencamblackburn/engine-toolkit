@@ -272,7 +272,7 @@ Relative (or ratio) values are used so that they remain correct regardless of th
 
 The following diagram represents the points for a box describing an object that is `50x50` in the center of a `100x100` image:
 
-![](/experiments/engine-toolkit/static/boundingpoly.png)
+![](/veritone/engine-toolkit/static/boundingpoly.png)
 
 The `boundingPoly` array for this object would be:
 

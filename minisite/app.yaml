@@ -1,7 +1,7 @@
 runtime: go111
 service: engine-toolkit
 handlers:
-- url: /experiments/engine-toolkit/static
+- url: /veritone/engine-toolkit/static
   static_dir: static
-- url: /experiments/engine-toolkit*
+- url: /veritone/engine-toolkit*
   script: auto

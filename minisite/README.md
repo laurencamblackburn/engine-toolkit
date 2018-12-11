@@ -1,6 +1,6 @@
 # Engine Toolkit Minisite
 
-This is the code for the website running at https://machinebox.io/experiments/engine-toolkit.
+This is the code for the website running at https://machinebox.io/veritone/engine-toolkit.
 
 ## Dev
 

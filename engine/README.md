@@ -1,6 +1,6 @@
 # `engine` tool
 
-This tool is bundled into engines and becomes the entry point. It is more fully explained in [the documentation](https://machinebox.io/experiments/engine-toolkit#the-engine-executable).
+This tool is bundled into engines and becomes the entry point. It is more fully explained in [the documentation](https://machinebox.io/veritone/engine-toolkit#the-engine-executable).
 
 ## Development
 
