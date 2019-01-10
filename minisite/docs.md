@@ -35,6 +35,8 @@ Each webhook provides unique functionality, and is therefore triggered by a uniq
 
 > The webhook endpoints are configurable and are specified using environment variables in the [`Dockerfile`](#writing-a-dockerfile).
 
+The webhooks are expected to return a `200 OK` successful response, otherwise the engine toolkit will retry the operation by making the same requests again.
+
 ### Ready webhook
 
 The Ready webhook is used to determine if the engine is ready to start doing work or not.
