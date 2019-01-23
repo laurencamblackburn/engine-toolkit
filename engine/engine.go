@@ -173,22 +173,21 @@ func (e *Engine) periodicallySendProgressMessage(ctx context.Context, messageKey
 		for {
 			select {
 			case <-time.After(e.Config.Tasks.ProcessingUpdateInterval):
-				e.logDebug("(skipping) send chunk processing update")
-				// updateMessage := chunkProcessedStatus{
-				// 	Type:         messageTypeChunkProcessedStatus,
-				// 	TimestampUTC: time.Now().Unix(),
-				// 	TaskID:       taskID,
-				// 	ChunkUUID:    chunkUUID,
-				// 	Status:       chunkStatusProcessing,
-				// }
-				// _, _, err := e.producer.SendMessage(&sarama.ProducerMessage{
-				// 	Topic: e.Config.Kafka.ChunkTopic,
-				// 	Key:   sarama.ByteEncoder(messageKey),
-				// 	Value: newJSONEncoder(updateMessage),
-				// })
-				// if err != nil {
-				// 	e.logDebug("WARN", "failed to send chunk processing update:", err)
-				// }
+				updateMessage := chunkProcessedStatus{
+					Type:         messageTypeChunkProcessedStatus,
+					TimestampUTC: time.Now().Unix(),
+					TaskID:       taskID,
+					ChunkUUID:    chunkUUID,
+					Status:       chunkStatusProcessing,
+				}
+				_, _, err := e.producer.SendMessage(&sarama.ProducerMessage{
+					Topic: e.Config.Kafka.ChunkTopic,
+					Key:   sarama.ByteEncoder(messageKey),
+					Value: newJSONEncoder(updateMessage),
+				})
+				if err != nil {
+					e.logDebug("WARN", "failed to send chunk processing update:", err)
+				}
 			case <-ctx.Done():
 				return
 			}
@@ -197,27 +196,49 @@ func (e *Engine) periodicallySendProgressMessage(ctx context.Context, messageKey
 	return finished
 }
 
+// processMessageMediaChunk processes a single media chunk as described by the sarama.ConsumerMessage.
 func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.ConsumerMessage) error {
 	var mediaChunk mediaChunkMessage
 	if err := json.Unmarshal(msg.Value, &mediaChunk); err != nil {
 		return errors.Wrap(err, "unmarshal message value JSON")
 	}
-
-	// // send chunk 'processing' update
+	finalUpdateMessage := chunkProcessedStatus{
+		Type:      messageTypeChunkProcessedStatus,
+		TaskID:    mediaChunk.TaskID,
+		ChunkUUID: mediaChunk.ChunkUUID,
+		Status:    chunkStatusSuccess, // optimistic
+	}
+	defer func() {
+		// send the final message
+		finalUpdateMessage.TimestampUTC = time.Now().Unix()
+		_, _, err := e.producer.SendMessage(&sarama.ProducerMessage{
+			Topic: e.Config.Kafka.ChunkTopic,
+			Key:   sarama.ByteEncoder(msg.Key),
+			Value: newJSONEncoder(finalUpdateMessage),
+		})
+		if err != nil {
+			e.logDebug("WARN", "failed to send final chunk update:", err)
+		}
+	}()
+	// send chunk 'processing' update
 	updateMessage := chunkProcessedStatus{
 		Type:         messageTypeChunkProcessedStatus,
 		TimestampUTC: time.Now().Unix(),
 		TaskID:       mediaChunk.TaskID,
 		ChunkUUID:    mediaChunk.ChunkUUID,
+		Status:       chunkStatusProcessing,
 	}
-	// _, _, err := e.producer.SendMessage(&sarama.ProducerMessage{
-	// 	Topic: e.Config.Kafka.ChunkTopic,
-	// 	Key:   sarama.ByteEncoder(msg.Key),
-	// 	Value: newJSONEncoder(updateMessage),
-	// })
-	// if err != nil {
-	// 	return errors.Wrapf(err, "SendMessage: %q %s %s", e.Config.Kafka.ChunkTopic, messageTypeChunkProcessedStatus, chunkStatusProcessing)
-	// }
+	_, _, err := e.producer.SendMessage(&sarama.ProducerMessage{
+		Topic: e.Config.Kafka.ChunkTopic,
+		Key:   sarama.ByteEncoder(msg.Key),
+		Value: newJSONEncoder(updateMessage),
+	})
+	if err != nil {
+		err = errors.Wrapf(err, "SendMessage: %q %s %s", e.Config.Kafka.ChunkTopic, messageTypeChunkProcessedStatus, chunkStatusProcessing)
+		finalUpdateMessage.Status = chunkStatusError
+		finalUpdateMessage.ErrorMsg = err.Error()
+		return err
+	}
 
 	// start sending chunk processing updates
 	ctxProcessingUpdate, cancelProcessingUpdate := context.WithCancel(ctx)
@@ -229,7 +250,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		e.Config.Webhooks.Backoff.MaxRetries,
 	)
 	var engineOutputContent engineOutput
-	err := retry.Do(func() error {
+	err = retry.Do(func() error {
 		req, err := newRequestFromMediaChunk(e.client, e.Config.Webhooks.Process.URL, mediaChunk)
 		if err != nil {
 			return errors.Wrap(err, "new request")
@@ -261,23 +282,17 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 
 	if err != nil {
 		// send error message
-		e.logDebug("process webhook error:", err)
-		updateMessage.Status = chunkStatusError
-		updateMessage.ErrorMsg = err.Error()
-		updateMessage.TimestampUTC = time.Now().Unix()
-		_, _, err = e.producer.SendMessage(&sarama.ProducerMessage{
-			Topic: e.Config.Kafka.ChunkTopic,
-			Key:   sarama.ByteEncoder(msg.Key),
-			Value: newJSONEncoder(updateMessage),
-		})
-		if err != nil {
-			errors.Wrapf(err, "SendMessage: %q %s %s", e.Config.Kafka.ChunkTopic, messageTypeChunkProcessedStatus, chunkStatusSuccess)
-		}
-		return nil
+		err = errors.Wrapf(err, "SendMessage: %q %s %s", e.Config.Kafka.ChunkTopic, messageTypeChunkProcessedStatus, chunkStatusSuccess)
+		finalUpdateMessage.Status = chunkStatusError
+		finalUpdateMessage.ErrorMsg = err.Error()
+		return err
 	}
 	content, err := json.Marshal(engineOutputContent)
 	if err != nil {
-		return errors.Wrap(err, "json: marshal engine output content")
+		err = errors.Wrap(err, "json: marshal engine output content")
+		finalUpdateMessage.Status = chunkStatusError
+		finalUpdateMessage.ErrorMsg = err.Error()
+		return err
 	}
 	// send output message
 	outputMessage := engineOutputMessage{
@@ -295,18 +310,10 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		Value: newJSONEncoder(outputMessage),
 	})
 	if err != nil {
-		errors.Wrapf(err, "SendMessage: %q %s %s", e.Config.Kafka.ChunkTopic, messageTypeEngineOutput, err)
-	}
-	// send success message
-	updateMessage.Status = chunkStatusSuccess
-	updateMessage.TimestampUTC = time.Now().Unix()
-	_, _, err = e.producer.SendMessage(&sarama.ProducerMessage{
-		Topic: e.Config.Kafka.ChunkTopic,
-		Key:   sarama.ByteEncoder(msg.Key),
-		Value: newJSONEncoder(updateMessage),
-	})
-	if err != nil {
-		errors.Wrapf(err, "SendMessage: %q %s %s", e.Config.Kafka.ChunkTopic, messageTypeChunkProcessedStatus, chunkStatusSuccess)
+		err = errors.Wrapf(err, "SendMessage: %q %s %s", e.Config.Kafka.ChunkTopic, messageTypeEngineOutput, err)
+		finalUpdateMessage.Status = chunkStatusError
+		finalUpdateMessage.ErrorMsg = err.Error()
+		return err
 	}
 	e.consumer.MarkOffset(msg, "")
 	return nil

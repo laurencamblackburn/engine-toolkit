@@ -119,7 +119,7 @@ const (
 	chunkStatusIgnored chunkStatus = "IGNORED"
 	// chunkStatusProcessing is status to report when input chunk is still being processed.  When this is the case engine needs
 	// to keep sending this status every 90 seconds until either a SUCCESS or ERROR is reported.
-	//chunkStatusProcessing chunkStatus = "PROCESSING"
+	chunkStatusProcessing chunkStatus = "PROCESSING"
 )
 
 // chunkProcessedStatus - processing status of a chunk by stateless engines/conductors
