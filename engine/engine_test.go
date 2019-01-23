@@ -302,3 +302,89 @@ func TestIsTrainingTask(t *testing.T) {
 	is.NoErr(err)
 	is.Equal(isTraining, false) // not training task
 }
+
+func TestIgnoredChunks(t *testing.T) {
+	is := is.New(t)
+
+	engine := NewEngine()
+	engine.Config.Subprocess.Arguments = []string{} // no subprocess
+	engine.Config.Kafka.ChunkTopic = "chunk-topic"
+	engine.logDebug = func(args ...interface{}) {}
+	inputPipe := newPipe()
+	defer inputPipe.Close()
+	outputPipe := newPipe()
+	defer outputPipe.Close()
+	engine.consumer = inputPipe
+	engine.producer = outputPipe
+	readySrv := newOKServer()
+	defer readySrv.Close()
+	engine.Config.Webhooks.Ready.URL = readySrv.URL
+	processSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer processSrv.Close()
+	engine.Config.Webhooks.Process.URL = processSrv.URL
+
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go func() {
+		err := engine.Run(ctx)
+		is.NoErr(err)
+	}()
+
+	inputMessage := mediaChunkMessage{
+		TimestampUTC:  time.Now().Unix(),
+		ChunkUUID:     "123",
+		Type:          messageTypeMediaChunk,
+		StartOffsetMS: 1000,
+		EndOffsetMS:   2000,
+		JobID:         "job1",
+		TDOID:         "tdo1",
+		TaskID:        "task1",
+	}
+	_, _, err := inputPipe.SendMessage(&sarama.ProducerMessage{
+		Offset: 1,
+		Key:    sarama.StringEncoder(inputMessage.TaskID),
+		Value:  newJSONEncoder(inputMessage),
+	})
+	is.NoErr(err)
+
+	var outputMsg *sarama.ConsumerMessage
+	var chunkProcessedStatus chunkProcessedStatus
+
+	// read the chunk processing message
+	select {
+	case outputMsg = <-outputPipe.Messages():
+	case <-time.After(1 * time.Second):
+		is.Fail() // timed out
+	}
+	is.Equal(string(outputMsg.Key), inputMessage.TaskID)      // output message key must be TaskID
+	is.Equal(outputMsg.Topic, engine.Config.Kafka.ChunkTopic) // chunk topic
+	err = json.Unmarshal(outputMsg.Value, &chunkProcessedStatus)
+	is.NoErr(err)
+	is.Equal(chunkProcessedStatus.Type, messageTypeChunkProcessedStatus)
+	is.Equal(chunkProcessedStatus.TaskID, inputMessage.TaskID)
+	is.Equal(chunkProcessedStatus.ChunkUUID, inputMessage.ChunkUUID)
+	is.Equal(chunkProcessedStatus.Status, chunkStatusProcessing)
+	is.Equal(chunkProcessedStatus.ErrorMsg, "")
+
+	// read the chunk ignore message
+	select {
+	case outputMsg = <-outputPipe.Messages():
+	case <-time.After(1 * time.Second):
+		is.Fail() // timed out
+		return
+	}
+	is.Equal(string(outputMsg.Key), inputMessage.TaskID)      // output message key must be TaskID
+	is.Equal(outputMsg.Topic, engine.Config.Kafka.ChunkTopic) // chunk topic
+	err = json.Unmarshal(outputMsg.Value, &chunkProcessedStatus)
+	is.NoErr(err)
+	is.Equal(chunkProcessedStatus.ErrorMsg, "")
+	is.Equal(chunkProcessedStatus.Type, messageTypeChunkProcessedStatus)
+	is.Equal(chunkProcessedStatus.TaskID, inputMessage.TaskID)
+	is.Equal(chunkProcessedStatus.ChunkUUID, inputMessage.ChunkUUID)
+	is.Equal(chunkProcessedStatus.Status, chunkStatusIgnored)
+
+	is.Equal(inputPipe.Offset, int64(1)) // Offset
+}

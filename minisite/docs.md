@@ -124,6 +124,12 @@ The following JSON is an example showing some faces that were found in the image
 
 > If you have a question about what your engine should output and this documentation doesn't cover it, please [open an issue to start a conversation](https://github.com/veritone/engine-toolkit/issues/new).
 
+#### Ignoring chunks
+
+If your engine is not going to process a chunk, the Process webhook should return a `204 No Content` response.
+
+The Engine Toolkit will report the chunk as ignored.
+
 ## Testing your webhooks
 
 Since the [Webhooks](#webhooks) are just HTTP endpoints, you can test them by making your own HTTP requests directly.

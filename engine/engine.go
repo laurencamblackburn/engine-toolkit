@@ -115,10 +115,9 @@ func (e *Engine) runInference(ctx context.Context) error {
 					return
 				}
 				if err := e.processMessage(ctx, msg); err != nil {
-					// TODO: this is serious, we need to report it as a failure to
-					// the platform.
 					e.logDebug(fmt.Sprintf("processing error: %v", err))
 				}
+				e.consumer.MarkOffset(msg, "")
 			case <-time.After(e.Config.EndIfIdleDuration):
 				e.logDebug(fmt.Sprintf("idle for %s", e.Config.EndIfIdleDuration))
 				return
@@ -244,6 +243,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 	ctxProcessingUpdate, cancelProcessingUpdate := context.WithCancel(ctx)
 	processingUpdateFinished := e.periodicallySendProgressMessage(ctxProcessingUpdate, msg.Key, mediaChunk.TaskID, mediaChunk.ChunkUUID)
 
+	ignoreChunk := false
 	retry := newDoubleTimeBackoff(
 		e.Config.Webhooks.Backoff.InitialBackoffDuration,
 		e.Config.Webhooks.Backoff.MaxBackoffDuration,
@@ -264,6 +264,10 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		var buf bytes.Buffer
 		if _, err := io.Copy(&buf, resp.Body); err != nil {
 			return errors.Wrap(err, "read body")
+		}
+		if resp.StatusCode == http.StatusNoContent {
+			ignoreChunk = true
+			return nil
 		}
 		if resp.StatusCode != http.StatusOK {
 			return errors.Errorf("%d: %s", resp.StatusCode, buf.String())
@@ -286,6 +290,10 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		finalUpdateMessage.Status = chunkStatusError
 		finalUpdateMessage.ErrorMsg = err.Error()
 		return err
+	}
+	if ignoreChunk {
+		finalUpdateMessage.Status = chunkStatusIgnored
+		return nil
 	}
 	content, err := json.Marshal(engineOutputContent)
 	if err != nil {
@@ -315,7 +323,6 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		finalUpdateMessage.ErrorMsg = err.Error()
 		return err
 	}
-	e.consumer.MarkOffset(msg, "")
 	return nil
 }
 
