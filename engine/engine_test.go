@@ -78,20 +78,20 @@ func TestProcessingChunk(t *testing.T) {
 	var chunkProcessedStatus chunkProcessedStatus
 
 	// read the chunk processing message
-	// select {
-	// case outputMsg = <-outputPipe.Messages():
-	// case <-time.After(1 * time.Second):
-	// 	is.Fail() // timed out
-	// }
-	// is.Equal(string(outputMsg.Key), inputMessage.TaskID)      // output message key must be TaskID
-	// is.Equal(outputMsg.Topic, engine.Config.Kafka.ChunkTopic) // chunk topic
-	// err = json.Unmarshal(outputMsg.Value, &chunkProcessedStatus)
-	// is.NoErr(err)
-	// is.Equal(chunkProcessedStatus.Type, messageTypeChunkProcessedStatus)
-	// is.Equal(chunkProcessedStatus.TaskID, inputMessage.TaskID)
-	// is.Equal(chunkProcessedStatus.ChunkUUID, inputMessage.ChunkUUID)
-	// is.Equal(chunkProcessedStatus.Status, chunkStatusProcessing)
-	// is.Equal(chunkProcessedStatus.ErrorMsg, "")
+	select {
+	case outputMsg = <-outputPipe.Messages():
+	case <-time.After(1 * time.Second):
+		is.Fail() // timed out
+	}
+	is.Equal(string(outputMsg.Key), inputMessage.TaskID)      // output message key must be TaskID
+	is.Equal(outputMsg.Topic, engine.Config.Kafka.ChunkTopic) // chunk topic
+	err = json.Unmarshal(outputMsg.Value, &chunkProcessedStatus)
+	is.NoErr(err)
+	is.Equal(chunkProcessedStatus.Type, messageTypeChunkProcessedStatus)
+	is.Equal(chunkProcessedStatus.TaskID, inputMessage.TaskID)
+	is.Equal(chunkProcessedStatus.ChunkUUID, inputMessage.ChunkUUID)
+	is.Equal(chunkProcessedStatus.Status, chunkStatusProcessing)
+	is.Equal(chunkProcessedStatus.ErrorMsg, "")
 
 	// check for the final chunk output message
 	select {
@@ -122,7 +122,7 @@ func TestProcessingChunk(t *testing.T) {
 	err = json.Unmarshal(outputMsg.Value, &chunkProcessedStatus)
 	is.NoErr(err)
 	is.Equal(chunkProcessedStatus.ErrorMsg, "")
-	is.Equal(chunkProcessedStatus.Type, messageTypeChunkProcessedStatus) // NOTE: could be another issue causing this
+	is.Equal(chunkProcessedStatus.Type, messageTypeChunkProcessedStatus)
 	is.Equal(chunkProcessedStatus.TaskID, inputMessage.TaskID)
 	is.Equal(chunkProcessedStatus.ChunkUUID, inputMessage.ChunkUUID)
 	is.Equal(chunkProcessedStatus.Status, chunkStatusSuccess)
