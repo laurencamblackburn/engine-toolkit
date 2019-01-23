@@ -220,7 +220,6 @@ func TestSubprocess(t *testing.T) {
 }
 
 func TestTaskProcessingInterval(t *testing.T) {
-	t.Skip("skipping because we've disabled 'processing' updates")
 	is := is.New(t)
 
 	engine := NewEngine()
