@@ -31,7 +31,6 @@ func TestMediaChunkMessagePayload(t *testing.T) {
 	payload, err := m.unmarshalPayload()
 	is.NoErr(err)
 	is.Equal(payload.Token, "abc123")
-
 }
 
 func TestKafkaIntegration(t *testing.T) {

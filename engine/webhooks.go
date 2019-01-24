@@ -28,6 +28,7 @@ func newRequestFromMediaChunk(client *http.Client, processURL string, msg mediaC
 	w.WriteField("cacheURI", msg.CacheURI)
 	w.WriteField("veritoneApiBaseUrl", payload.VeritoneAPIBaseURL)
 	w.WriteField("token", payload.Token)
+	w.WriteField("payload", string(msg.TaskPayload))
 	if msg.CacheURI != "" {
 		f, err := w.CreateFormFile("chunk", "chunk.data")
 		if err != nil {

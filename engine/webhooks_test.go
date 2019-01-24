@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -34,7 +35,8 @@ func TestNewRequestFromMediaChunk(t *testing.T) {
 			"libraryID":            "lib123",
 			"libraryEngineModelID": "libraryEngineModel123",
 			"veritoneAPIBaseURL":   "https://test.veritone.com/api",
-			"token":                "tok123"
+			"token":                "tok123",
+			"customField1": 		"abc123"
 		}`),
 	}
 	client := http.DefaultClient
@@ -58,6 +60,14 @@ func TestNewRequestFromMediaChunk(t *testing.T) {
 		is.Equal(r.FormValue("veritoneApiBaseUrl"), "https://test.veritone.com/api")
 		is.Equal(r.FormValue("token"), "tok123")
 		//is.Equal("content", r.FormValue("content"))
+
+		is.True(r.FormValue("payload") != "")
+		// check the payload
+		var payload map[string]interface{}
+		err := json.Unmarshal([]byte(r.FormValue("payload")), &payload)
+		is.NoErr(err)
+		is.Equal(payload["customField1"], "abc123")
+
 		// check the file
 		f, _, err := r.FormFile("chunk")
 		is.NoErr(err)

@@ -73,6 +73,7 @@ The following advanced fields are also included:
 * `cacheURI` - (string) URL of the chunk source file
 * `veritoneApiBaseUrl` - (string) The root URL for Veritone platform API requests
 * `token` - (string) The token to use when making low level API requests
+* `payload` - (string) JSON string containing the entire task payload
 
 > As the Engine Toolkit evolves, we expect to add more fields here.
 
