@@ -30,12 +30,12 @@ func TestNewRequestFromMediaChunk(t *testing.T) {
 		Width:         500,
 		Height:        600,
 		Content:       "content",
-		TaskPayload: payload{
-			LibraryID:            "lib123",
-			LibraryEngineModelID: "libraryEngineModel123",
-			VeritoneAPIBaseURL:   "https://test.veritone.com/api",
-			Token:                "tok123",
-		},
+		TaskPayload: []byte(`{
+			"libraryID":            "lib123",
+			"libraryEngineModelID": "libraryEngineModel123",
+			"veritoneAPIBaseURL":   "https://test.veritone.com/api",
+			"token":                "tok123"
+		}`),
 	}
 	client := http.DefaultClient
 	var wg sync.WaitGroup

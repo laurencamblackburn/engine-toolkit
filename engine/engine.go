@@ -303,7 +303,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		return err
 	}
 	// send output message
-	outputMessage := engineOutputMessage{
+	outputMessage := mediaChunkMessage{
 		Type:          messageTypeEngineOutput,
 		TaskID:        mediaChunk.TaskID,
 		JobID:         mediaChunk.JobID,

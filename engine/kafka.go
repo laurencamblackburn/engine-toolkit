@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"io"
 	"log"
 	"strings"
@@ -81,21 +82,31 @@ func newKafkaProducer(brokers []string) (Producer, error) {
 }
 
 type mediaChunkMessage struct {
-	Type          messageType `json:"type"`
-	TimestampUTC  int64       `json:"timestampUTC"`
-	MIMEType      string      `json:"mimeType"`
-	TaskID        string      `json:"taskId"`
-	TDOID         string      `json:"tdoId"`
-	JobID         string      `json:"jobId"`
-	ChunkIndex    int         `json:"chunkIndex"`
-	StartOffsetMS int         `json:"startOffsetMs"`
-	EndOffsetMS   int         `json:"endOffsetMs"`
-	Width         int         `json:"width"`
-	Height        int         `json:"height"`
-	CacheURI      string      `json:"cacheURI"`
-	Content       string      `json:"content"`
-	TaskPayload   payload     `json:"taskPayload"`
-	ChunkUUID     string      `json:"chunkUUID"`
+	Type          messageType     `json:"type"`
+	TimestampUTC  int64           `json:"timestampUTC"`
+	MIMEType      string          `json:"mimeType"`
+	TaskID        string          `json:"taskId"`
+	TDOID         string          `json:"tdoId"`
+	JobID         string          `json:"jobId"`
+	ChunkIndex    int             `json:"chunkIndex"`
+	StartOffsetMS int             `json:"startOffsetMs"`
+	EndOffsetMS   int             `json:"endOffsetMs"`
+	Width         int             `json:"width"`
+	Height        int             `json:"height"`
+	CacheURI      string          `json:"cacheURI"`
+	Content       string          `json:"content"`
+	TaskPayload   json.RawMessage `json:"taskPayload"`
+	ChunkUUID     string          `json:"chunkUUID"`
+}
+
+// unmarshalPayload unmarshals the TaskPayload into the known
+// fields (in the payload type). This will ignore custom fields.
+func (m *mediaChunkMessage) unmarshalPayload() (payload, error) {
+	var p payload
+	if err := json.Unmarshal(m.TaskPayload, &p); err != nil {
+		return p, err
+	}
+	return p, nil
 }
 
 // messageType is an enum type for edge message types.

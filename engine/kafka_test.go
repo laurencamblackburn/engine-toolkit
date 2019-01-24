@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -12,6 +14,25 @@ import (
 	"github.com/matryer/is"
 	"github.com/pkg/errors"
 )
+
+func TestMediaChunkMessagePayload(t *testing.T) {
+	is := is.New(t)
+
+	var m mediaChunkMessage
+	src := `{
+		"jobId": "JobID",
+		"taskPayload": {
+			"token": "abc123"
+		}
+	}`
+	is.NoErr(json.Unmarshal([]byte(src), &m))
+	is.True(strings.Contains(strings.TrimSpace(string(m.TaskPayload)), `"token": "abc123"`))
+
+	payload, err := m.unmarshalPayload()
+	is.NoErr(err)
+	is.Equal(payload.Token, "abc123")
+
+}
 
 func TestKafkaIntegration(t *testing.T) {
 	if os.Getenv("KAFKATEST") == "" {
