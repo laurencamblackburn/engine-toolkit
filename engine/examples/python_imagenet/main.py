@@ -43,7 +43,7 @@ def to_series(classname, confidence, startMS, stopMS):
         'found': classname,
         'object':  obj
     }]
-    return seriesItems
+    return {'series': seriesItems}
 
 
 @app.route('/')
