@@ -82,7 +82,7 @@ The following advanced fields are also included:
 * `token` - (string) The token to use when making low level API requests
 * `payload` - (string) JSON string containing the entire task payload
 
-> As the Engine Toolkit evolves, we expect to add more fields here.
+> As the Engine Toolkit evolves, we expect to add more fields here. If you notice something missing, please [open an issue and let us know](https://github.com/veritone/engine-toolkit/issues/new?title=request+fields).
 
 #### Process webhook response
 
