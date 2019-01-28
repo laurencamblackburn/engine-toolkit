@@ -14,7 +14,7 @@ buildrelease:
 
 clean:
 	rm -rf dist
-	rm release/bin/engine
+	rm -f release/bin/engine
 
 test:
 	go test -v ./...
