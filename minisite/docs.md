@@ -22,7 +22,14 @@ The rest of this guide describes how to do this, and provides additional reading
 An engine is an executable program, packaged along with its dependencies, into a [Docker container](#writing-a-dockerfile).
 Engines listen on an HTTP address and implement [Webhooks](#webhooks), which are called when they receive work.
 
-> For a complete example engine, see the [EXIF engine source code in Github](https://github.com/veritone/engine-toolkit/tree/master/engine/examples/exif).
+## Sample engines
+
+To see the code for a complete working engine, choose from the list below:
+
+* **Go** - [Golang EXIF engine project on GitHub](https://github.com/veritone/engine-toolkit/tree/master/engine/examples/exif)
+* **Python** - [Python Keras/Tensorflow Imagenet image tagging engine project on GitHub](https://github.com/veritone/engine-toolkit/tree/master/engine/examples/python_imagenet)
+
+> If you would like to contribute an additional example engine, please [open an issue to start a conversation](https://github.com/veritone/engine-toolkit/issues/new?title=sample+project).
 
 ## Webhooks
 
