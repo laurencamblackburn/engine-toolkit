@@ -21,6 +21,31 @@ model = ResNet50(weights='imagenet')
 app = Flask(__name__)
 server = None
 
+
+
+# returns Veritone series object from the classname and the confidence
+def to_series(classname, confidence, startMS, stopMS):
+    boundingPoly = [
+        {'x': 0, 'y': 0},
+        {'x': 1, 'y': 0},
+        {'x': 1, 'y': 1},
+        {'x': 0, 'y': 1}
+    ]
+    obj = {
+        'label': classname,
+        'type': 'object',
+        'boundingPoly': boundingPoly
+    }
+    seriesItems = [{
+        'confidence': confidence,
+        'startTimeMs': int(startMS),
+        'stopTimeMs': int(stopMS),
+        'found': classname,
+        'object':  obj
+    }]
+    return seriesItems
+
+
 @app.route('/')
 def index():
     return readyz()
@@ -29,13 +54,27 @@ def index():
 def readyz():
     return 'OK', 200
 
-@app.route('/predict', methods=['POST'])
-def predict():
+
+@app.route('/process', methods=['POST'])
+def process():
     try:
         # load the chunk and save it to a buffer
         file = request.files['chunk']
         chunk = BytesIO()
         file.save(chunk)
+
+        # offset params for the frame
+        startOffsetMS = request.form['startOffsetMS']
+        endOffsetMS = request.form['endOffsetMS']
+        
+        # you can use width and height to calculate bounding poly
+        # width = request.form['width']
+        # height = request.form['height']
+
+        # this engine only support images so ignore different mime types
+        chunkMimeType = request.form['chunkMimeType']
+        if not chunkMimeType.startswith('image/'):
+            return "ignore", 204
 
         # pre process the image features
         img = image.load_img(chunk, target_size=(224, 224))
@@ -50,7 +89,8 @@ def predict():
         image_class = decoded[0][1]
         image_confidence = float(decoded[0][2])
  
-        return jsonify({'success': True, 'class': image_class, 'confidence': image_confidence})
+        series = to_series(image_class, image_confidence, startOffsetMS, endOffsetMS)
+        return jsonify(series)
     except:
         tb = traceback.format_exc()        
         app.logger.error('error predicting %s', str(tb))
