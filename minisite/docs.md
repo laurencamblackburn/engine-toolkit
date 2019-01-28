@@ -26,8 +26,8 @@ Engines listen on an HTTP address and implement [Webhooks](#webhooks), which are
 
 To see the code for a complete working engine, choose from the list below:
 
-* **Go** - [Golang EXIF engine project on GitHub](https://github.com/veritone/engine-toolkit/tree/master/engine/examples/exif)
-* **Python** - [Python Keras/Tensorflow Imagenet image tagging engine project on GitHub](https://github.com/veritone/engine-toolkit/tree/master/engine/examples/python_imagenet)
+* **Go** - [Golang EXIF engine](https://github.com/veritone/engine-toolkit/tree/master/engine/examples/exif)
+* **Python** - [Python Keras/Tensorflow Imagenet image tagging engine](https://github.com/veritone/engine-toolkit/tree/master/engine/examples/python_imagenet)
 
 > If you would like to contribute an additional example engine, please [open an issue to start a conversation](https://github.com/veritone/engine-toolkit/issues/new?title=sample+project).
 
