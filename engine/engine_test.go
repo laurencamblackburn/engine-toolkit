@@ -77,22 +77,6 @@ func TestProcessingChunk(t *testing.T) {
 	var outputMsg *sarama.ConsumerMessage
 	var chunkProcessedStatus chunkProcessedStatus
 
-	// read the chunk processing message
-	select {
-	case outputMsg = <-outputPipe.Messages():
-	case <-time.After(1 * time.Second):
-		is.Fail() // timed out
-	}
-	is.Equal(string(outputMsg.Key), inputMessage.TaskID)      // output message key must be TaskID
-	is.Equal(outputMsg.Topic, engine.Config.Kafka.ChunkTopic) // chunk topic
-	err = json.Unmarshal(outputMsg.Value, &chunkProcessedStatus)
-	is.NoErr(err)
-	is.Equal(chunkProcessedStatus.Type, messageTypeChunkProcessedStatus)
-	is.Equal(chunkProcessedStatus.TaskID, inputMessage.TaskID)
-	is.Equal(chunkProcessedStatus.ChunkUUID, inputMessage.ChunkUUID)
-	is.Equal(chunkProcessedStatus.Status, chunkStatusProcessing)
-	is.Equal(chunkProcessedStatus.ErrorMsg, "")
-
 	// check for the final chunk output message
 	select {
 	case outputMsg = <-outputPipe.Messages():
@@ -219,49 +203,6 @@ func TestSubprocess(t *testing.T) {
 	is.Equal(buf.String(), `something`)
 }
 
-func TestTaskProcessingInterval(t *testing.T) {
-	is := is.New(t)
-
-	engine := NewEngine()
-	engine.Config.Subprocess.Arguments = []string{} // no subprocess // no subprocess
-	outputPipe := newPipe()
-	defer outputPipe.Close()
-	engine.producer = outputPipe
-
-	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
-	defer cancel()
-
-	messageKey := []byte("key")
-	taskID := "taskID"
-	chunkUUID := "chunkUUID"
-
-	runFor := 1100 * time.Millisecond
-	engine.Config.Tasks.ProcessingUpdateInterval = 100 * time.Millisecond
-	finished := engine.periodicallySendProgressMessage(ctx, messageKey, taskID, chunkUUID)
-
-	go func() {
-		time.Sleep(runFor)
-		cancel()
-	}()
-
-	var messages []*sarama.ConsumerMessage
-	go func() {
-		for msg := range outputPipe.Messages() {
-			messages = append(messages, msg)
-		}
-	}()
-
-	select {
-	case <-time.After(2 * time.Second):
-		is.Fail() // didn't finish in time
-	case <-finished:
-	}
-
-	is.Equal(len(messages), 10)
-
-}
-
 func TestEndIfIdleDuration(t *testing.T) {
 	is := is.New(t)
 	ctx := context.Background()
@@ -352,22 +293,6 @@ func TestIgnoredChunks(t *testing.T) {
 
 	var outputMsg *sarama.ConsumerMessage
 	var chunkProcessedStatus chunkProcessedStatus
-
-	// read the chunk processing message
-	select {
-	case outputMsg = <-outputPipe.Messages():
-	case <-time.After(1 * time.Second):
-		is.Fail() // timed out
-	}
-	is.Equal(string(outputMsg.Key), inputMessage.TaskID)      // output message key must be TaskID
-	is.Equal(outputMsg.Topic, engine.Config.Kafka.ChunkTopic) // chunk topic
-	err = json.Unmarshal(outputMsg.Value, &chunkProcessedStatus)
-	is.NoErr(err)
-	is.Equal(chunkProcessedStatus.Type, messageTypeChunkProcessedStatus)
-	is.Equal(chunkProcessedStatus.TaskID, inputMessage.TaskID)
-	is.Equal(chunkProcessedStatus.ChunkUUID, inputMessage.ChunkUUID)
-	is.Equal(chunkProcessedStatus.Status, chunkStatusProcessing)
-	is.Equal(chunkProcessedStatus.ErrorMsg, "")
 
 	// read the chunk ignore message
 	select {

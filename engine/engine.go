@@ -161,40 +161,6 @@ func (e *Engine) processMessage(ctx context.Context, msg *sarama.ConsumerMessage
 	return nil
 }
 
-// periodicallySendProgressMessage sends a processing update immediately, and then at regular
-// intervals specified by Config.Tasks.ProcessingUpdateInterval.
-// Use the context to cancel this operation.
-// The returned channel will be closed once the operation has completed.
-func (e *Engine) periodicallySendProgressMessage(ctx context.Context, messageKey []byte, taskID, chunkUUID string) chan struct{} {
-	finished := make(chan struct{})
-	go func() {
-		defer close(finished)
-		for {
-			select {
-			case <-time.After(e.Config.Tasks.ProcessingUpdateInterval):
-				updateMessage := chunkProcessedStatus{
-					Type:         messageTypeChunkProcessedStatus,
-					TimestampUTC: time.Now().Unix(),
-					TaskID:       taskID,
-					ChunkUUID:    chunkUUID,
-					Status:       chunkStatusProcessing,
-				}
-				_, _, err := e.producer.SendMessage(&sarama.ProducerMessage{
-					Topic: e.Config.Kafka.ChunkTopic,
-					Key:   sarama.ByteEncoder(messageKey),
-					Value: newJSONEncoder(updateMessage),
-				})
-				if err != nil {
-					e.logDebug("WARN", "failed to send chunk processing update:", err)
-				}
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
-	return finished
-}
-
 // processMessageMediaChunk processes a single media chunk as described by the sarama.ConsumerMessage.
 func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.ConsumerMessage) error {
 	var mediaChunk mediaChunkMessage
@@ -219,29 +185,6 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 			e.logDebug("WARN", "failed to send final chunk update:", err)
 		}
 	}()
-	// send chunk 'processing' update
-	updateMessage := chunkProcessedStatus{
-		Type:         messageTypeChunkProcessedStatus,
-		TimestampUTC: time.Now().Unix(),
-		TaskID:       mediaChunk.TaskID,
-		ChunkUUID:    mediaChunk.ChunkUUID,
-		Status:       chunkStatusProcessing,
-	}
-	_, _, err := e.producer.SendMessage(&sarama.ProducerMessage{
-		Topic: e.Config.Kafka.ChunkTopic,
-		Key:   sarama.ByteEncoder(msg.Key),
-		Value: newJSONEncoder(updateMessage),
-	})
-	if err != nil {
-		err = errors.Wrapf(err, "SendMessage: %q %s %s", e.Config.Kafka.ChunkTopic, messageTypeChunkProcessedStatus, chunkStatusProcessing)
-		finalUpdateMessage.Status = chunkStatusError
-		finalUpdateMessage.ErrorMsg = err.Error()
-		return err
-	}
-
-	// start sending chunk processing updates
-	ctxProcessingUpdate, cancelProcessingUpdate := context.WithCancel(ctx)
-	processingUpdateFinished := e.periodicallySendProgressMessage(ctxProcessingUpdate, msg.Key, mediaChunk.TaskID, mediaChunk.ChunkUUID)
 
 	ignoreChunk := false
 	retry := newDoubleTimeBackoff(
@@ -250,7 +193,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		e.Config.Webhooks.Backoff.MaxRetries,
 	)
 	var engineOutputContent engineOutput
-	err = retry.Do(func() error {
+	err := retry.Do(func() error {
 		req, err := newRequestFromMediaChunk(e.client, e.Config.Webhooks.Process.URL, mediaChunk)
 		if err != nil {
 			return errors.Wrap(err, "new request")
@@ -278,12 +221,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 			}
 		}
 		return nil
-	}) // NOTE: this err is handled below
-
-	// stop sending processing updates
-	cancelProcessingUpdate()
-	<-processingUpdateFinished
-
+	})
 	if err != nil {
 		// send error message
 		err = errors.Wrapf(err, "SendMessage: %q %s %s", e.Config.Kafka.ChunkTopic, messageTypeChunkProcessedStatus, chunkStatusSuccess)
