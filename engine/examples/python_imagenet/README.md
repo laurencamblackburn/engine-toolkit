@@ -16,6 +16,15 @@ It is written in Python and makes use of the [Veritone Engine Toolkit](https://m
 * `testdata` - Folder containing files used in the unit tests
 * `main.py` - Python Flask app with Keras and Tensorflow
 
+## Get started
+
+The `Dockerfile` contains the following line:
+
+```docker
+ADD ./dist/engine /app/engine
+```
+
+You can get the `engine` binary when you [Download the Veritone Engine Toolkit SDK](https://github.com/veritone/engine-toolkit/releases/latest). Place it inside this project in a folder called `dist`.
 
 ## Make the docker image
 

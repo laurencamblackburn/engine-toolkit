@@ -6,6 +6,16 @@ It uses the `github.com/rwcarlsen/goexif` project to extract EXIF metadata from 
 
 It is written in Go and makes use of the [Veritone Engine Toolkit](https://machinebox.io/veritone/engine-toolkit).
 
+## Get started
+
+The `Dockerfile` contains the following line:
+
+```docker
+ADD ./dist/engine /app/engine
+```
+
+You can get the `engine` binary when you [Download the Veritone Engine Toolkit SDK](https://github.com/veritone/engine-toolkit/releases/latest). Place it inside this project in a folder called `dist`.
+
 ## Files
 
 * `main.go` - Main engine code
