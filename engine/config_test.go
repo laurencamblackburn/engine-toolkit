@@ -20,7 +20,6 @@ func TestNewConfig(t *testing.T) {
 	os.Setenv("END_IF_IDLE_SECS", "60")
 
 	config := NewConfig()
-	is.Equal(config.Tasks.ProcessingUpdateInterval, 90*time.Second)
 	is.Equal(config.Webhooks.Ready.URL, "http://0.0.0.0:8080/readyz")
 	is.Equal(config.Webhooks.Process.URL, "http://0.0.0.0:8080/process")
 	is.Equal(len(config.Kafka.Brokers), 2)

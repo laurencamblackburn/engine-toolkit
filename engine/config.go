@@ -68,19 +68,11 @@ type Config struct {
 			MaxBackoffDuration time.Duration
 		}
 	}
-	// Tasks holds task configuration values.
-	Tasks struct {
-		// ProcessingUpdateInterval is how often the chunk processing update
-		// is sent.
-		ProcessingUpdateInterval time.Duration
-	}
 }
 
 // NewConfig gets default configuration settings.
 func NewConfig() Config {
 	var c Config
-
-	c.Tasks.ProcessingUpdateInterval = 90 * time.Second
 
 	c.Subprocess.Arguments = os.Args[1:]
 	c.Subprocess.ReadyTimeout = 1 * time.Minute
