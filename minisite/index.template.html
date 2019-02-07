@@ -1,110 +1,134 @@
 <!DOCTYPE html>
 <html lang='en'>
-	<head>
-		<meta charset='utf-8'>
-		<meta name='viewport' content='width=device-width, initial-scale=1.0'>
-		<meta http-equiv='X-UA-Compatible' content='ie=edge'>
-		<link href="https://fonts.googleapis.com/css?family=Roboto|Anonymous+Pro" rel="stylesheet">
-		<link rel='stylesheet' href='/veritone/engine-toolkit/static/bulma.min.css'>
-		<link rel='stylesheet' href='/veritone/engine-toolkit/static/docs.css?v=1'>
-		<meta name='description' content='Veritone Engine Toolkit makes it easy to build and deploy engines into Veritone.'>
-		<meta name='keywords' content='Docker,Artificial intelligence'>
-		<meta name='author' content='Machine Box, Inc.'>
-		<meta property='og:url' content='https://machinebox.io/veritone/engine-toolkit'>
-		<meta property='og:type' content='website'>
-		<meta property='og:title' content='Veritone Engine Toolkit'>
-		<meta property='og:description' content="Veritone Engine Toolkit makes it easy to build and deploy engines into Veritone.">
-		<meta property='og:image' content='https://machinebox.io/veritone/engine-toolkit/static/engine-toolkit-logo.png?cb=v1.413681018464102578'>
-		<meta name='twitter:card' content='summary'>
-		<meta name='twitter:site' content='@machineboxio'>
-		<meta name='twitter:title' content='Veritone Engine Toolkit'>
-		<meta name='twitter:description' content='Veritone Engine Toolkit makes it easy to build and deploy engines into Veritone.'>
-		<meta name='twitter:image' content='https://machinebox.io/veritone/engine-toolkit/static/engine-toolkit-logo.png?cb=v1.413681018464102578'>
-		<link rel='apple-touch-icon' sizes='57x57' href='/assets/shared/static/favicon/apple-icon-57x57.png'>
-		<link rel='apple-touch-icon' sizes='60x60' href='/assets/shared/static/favicon/apple-icon-60x60.png'>
-		<link rel='apple-touch-icon' sizes='72x72' href='/assets/shared/static/favicon/apple-icon-72x72.png'>
-		<link rel='apple-touch-icon' sizes='76x76' href='/assets/shared/static/favicon/apple-icon-76x76.png'>
-		<link rel='apple-touch-icon' sizes='114x114' href='/assets/shared/static/favicon/apple-icon-114x114.png'>
-		<link rel='apple-touch-icon' sizes='120x120' href='/assets/shared/static/favicon/apple-icon-120x120.png'>
-		<link rel='apple-touch-icon' sizes='144x144' href='/assets/shared/static/favicon/apple-icon-144x144.png'>
-		<link rel='apple-touch-icon' sizes='152x152' href='/assets/shared/static/favicon/apple-icon-152x152.png'>
-		<link rel='apple-touch-icon' sizes='180x180' href='/assets/shared/static/favicon/apple-icon-180x180.png'>
-		<link rel='icon' type='image/png' sizes='192x192' href='/assets/shared/static/favicon/android-icon-192x192.png'>
-		<link rel='icon' type='image/png' sizes='32x32' href='/assets/shared/static/favicon/favicon-32x32.png'>
-		<link rel='icon' type='image/png' sizes='96x96' href='/assets/shared/static/favicon/favicon-96x96.png'>
-		<link rel='icon' type='image/png' sizes='16x16' href='/assets/shared/static/favicon/favicon-16x16.png'>
-		<link rel='manifest' href='/assets/shared/static/favicon/manifest.json'>
-		<meta name='msapplication-TileColor' content='#ffffff'>
-		<meta name='msapplication-TileImage' content='https://machinebox.io/assets/shared/static/favicon/ms-icon-144x144.png'>
-		<meta name='theme-color' content='#ffffff'>
-		<title>Veritone Engine Toolkit</title>
-	</head>
-	<body>
-		<section class='hero veritone is-dark'>
-			<div class='hero-body'>
-			<div class='container'>
-				<h1 class='title'>
-					<a href='/veritone/engine-toolkit'>Veritone Engine Toolkit</a>
-					<span class='tag is-warning'>BETA</span>
-				</h1>
-				<h2 class='subtitle'>
-					Deliver your AI capabilities at planet scale
-				</h2>
-			</div>
-			</div>
-		</section>
-		<section>
-			<div class='container'>
-				<div class='columns'>
-					<div class='column is-two-thirds'>
-						<div class='content'>
-							<article class="message is-danger">
-								<div class="message-body">
-									<strong>This is a BETA release</strong> of the Engine Toolkit SDK.
-									While there are engines currently running in production build using this toolkit, 
-									some features might be changed in backward-incompatible ways and are not subject to any SLA or deprecation policy.
-								</div>
-							</article>
-							<h1 class='top-title'>
-								Welcome
-							</h1>
-							<p>
-								Welcome to the Veritone Engine Toolkit.
-								Use the list below to navigate around this documentation
-								or read it in order to get started.
-							</p>
-							<%= content %>
-						</div>
+<head>
+	<meta charset='utf-8'>
+	<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+	<meta http-equiv='X-UA-Compatible' content='ie=edge'>
+	<link href="https://fonts.googleapis.com/css?family=Roboto|Anonymous+Pro" rel="stylesheet">
+	<link rel='stylesheet' href='/veritone/engine-toolkit/static/bulma.min.css'>
+	<link rel='stylesheet' href='/veritone/engine-toolkit/static/docs.css?v=1'>
+	<meta name='description' content='Veritone Engine Toolkit makes it easy to build and deploy engines into Veritone.'>
+	<meta name='keywords' content='Docker,Artificial intelligence'>
+	<meta name='author' content='Machine Box, Inc.'>
+	<meta property='og:url' content='https://machinebox.io/veritone/engine-toolkit'>
+	<meta property='og:type' content='website'>
+	<meta property='og:title' content='Veritone Engine Toolkit'>
+	<meta property='og:description' content="Veritone Engine Toolkit makes it easy to build and deploy engines into Veritone.">
+	<meta property='og:image' content='https://machinebox.io/veritone/engine-toolkit/static/engine-toolkit-logo.png?cb=v1.413681018464102578'>
+	<meta name='twitter:card' content='summary'>
+	<meta name='twitter:site' content='@machineboxio'>
+	<meta name='twitter:title' content='Veritone Engine Toolkit'>
+	<meta name='twitter:description' content='Veritone Engine Toolkit makes it easy to build and deploy engines into Veritone.'>
+	<meta name='twitter:image' content='https://machinebox.io/veritone/engine-toolkit/static/engine-toolkit-logo.png?cb=v1.413681018464102578'>
+	<link rel='apple-touch-icon' sizes='57x57' href='/assets/shared/static/favicon/apple-icon-57x57.png'>
+	<link rel='apple-touch-icon' sizes='60x60' href='/assets/shared/static/favicon/apple-icon-60x60.png'>
+	<link rel='apple-touch-icon' sizes='72x72' href='/assets/shared/static/favicon/apple-icon-72x72.png'>
+	<link rel='apple-touch-icon' sizes='76x76' href='/assets/shared/static/favicon/apple-icon-76x76.png'>
+	<link rel='apple-touch-icon' sizes='114x114' href='/assets/shared/static/favicon/apple-icon-114x114.png'>
+	<link rel='apple-touch-icon' sizes='120x120' href='/assets/shared/static/favicon/apple-icon-120x120.png'>
+	<link rel='apple-touch-icon' sizes='144x144' href='/assets/shared/static/favicon/apple-icon-144x144.png'>
+	<link rel='apple-touch-icon' sizes='152x152' href='/assets/shared/static/favicon/apple-icon-152x152.png'>
+	<link rel='apple-touch-icon' sizes='180x180' href='/assets/shared/static/favicon/apple-icon-180x180.png'>
+	<link rel='icon' type='image/png' sizes='192x192' href='/assets/shared/static/favicon/android-icon-192x192.png'>
+	<link rel='icon' type='image/png' sizes='32x32' href='/assets/shared/static/favicon/favicon-32x32.png'>
+	<link rel='icon' type='image/png' sizes='96x96' href='/assets/shared/static/favicon/favicon-96x96.png'>
+	<link rel='icon' type='image/png' sizes='16x16' href='/assets/shared/static/favicon/favicon-16x16.png'>
+	<link rel='manifest' href='/assets/shared/static/favicon/manifest.json'>
+	<meta name='msapplication-TileColor' content='#ffffff'>
+	<meta name='msapplication-TileImage' content='https://machinebox.io/assets/shared/static/favicon/ms-icon-144x144.png'>
+	<meta name='theme-color' content='#ffffff'>
+	<title>Veritone Engine Toolkit</title>
+</head>
+<body>
+	<section class='hero veritone is-dark'>
+		<div class='hero-body'>
+		<div class='container'>
+			<h1 class='title'>
+				<a href='/veritone/engine-toolkit'>Veritone Engine Toolkit</a>
+				<span class='tag is-warning'>BETA</span>
+			</h1>
+			<h2 class='subtitle'>
+				Deliver your AI capabilities at planet scale
+			</h2>
+		</div>
+		</div>
+	</section>
+	<section>
+		<div class='container'>
+			<div class='columns'>
+				<div class='column is-two-thirds'>
+					<div class='content'>
+						<article class="message is-danger">
+							<div class="message-body">
+								<strong>This is a BETA release</strong> of the Engine Toolkit SDK.
+								While there are engines currently running in production build using this toolkit, 
+								some features might be changed in backward-incompatible ways and are not subject to any SLA or deprecation policy.
+							</div>
+						</article>
+						<h1 class='top-title'>
+							Welcome
+						</h1>
+						<p>
+							Welcome to the Veritone Engine Toolkit.
+							Use the list below to navigate around this documentation
+							or read it in order to get started.
+						</p>
+						<%= content %>
 					</div>
-					<div class='column is-one-third'>
-						<div class="card">
-							<div class='card-content'>
-								<div class='content'>
-									<a href='https://github.com/veritone/engine-toolkit/releases/latest' class='button is-link is-fullwidth is-medium'>
-										<span>
-											Download SDK
-										</span>
-									</a>
-									<p>
-										or <a href='https://github.com/veritone/engine-toolkit/releases'>see previous releases</a>
-									</p>
-								</div>
+				</div>
+				<div class='column is-one-third'>
+					<div class="card">
+						<div class='card-content'>
+							<div class='content'>
+								<a href='https://github.com/veritone/engine-toolkit/releases/latest' class='button is-link is-fullwidth is-medium'>
+									<span>
+										Download SDK
+									</span>
+								</a>
+								<p>
+									or <a href='https://github.com/veritone/engine-toolkit/releases'>see previous releases</a>
+								</p>
 							</div>
 						</div>
 					</div>
 				</div>
 			</div>
-		</section>
-		<footer class='footer'>
-			<div class='content has-text-centered'>
-				<p>
-					<small>
-						Copyright &copy;2019 Veritone, Inc. All rights reserved.
-					</small>
-				</p>
-			</div>
-		</footer>
-		<script src='/veritone/engine-toolkit/static/jquery-3.3.1.min.js'></script>
-		<script src='/veritone/engine-toolkit/static/docs.js?v=1'></script>
-	</body>
+		</div>
+	</section>
+	<footer class='footer'>
+		<div class='content has-text-centered'>
+			<p>
+				<small>
+					Copyright &copy;2019 Veritone, Inc. All rights reserved.
+				</small>
+			</p>
+		</div>
+	</footer>
+	<script src='/veritone/engine-toolkit/static/jquery-3.3.1.min.js'></script>
+	<script src='/veritone/engine-toolkit/static/docs.js?v=1'></script>
+	<script>
+		(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+		(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+		m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+		})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+		ga('create', 'UA-93086638-1', {
+			'cookieDomain': 'none'
+		});
+		ga('send', 'pageview');
+		</script>
+		<script type="application/ld+json">
+		{
+		"@context": "http://schema.org",
+		"@type": "Organization",
+		"url": "https://machinebox.io/",
+		"logo": "https://machinebox.io/assets/shared/static/img/machineboxlogo.svg",
+		"contactPoint": [{
+			"@type": "ContactPoint",
+			"email": "machinebox@veritone.com",
+			"contactType": "Customer support",
+			"url": "https://machinebox.io/contact"
+		}]
+		}
+		</script>
+</body>
 </html>
