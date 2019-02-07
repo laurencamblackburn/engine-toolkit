@@ -15,3 +15,4 @@ engine/examples/exif/dist/
 engine/release/bin/engine 
 engine/examples/python_imagenet/weights/resnet50_weights_tf_dim_ordering_tf_kernels.h5
 engine/examples/python_imagenet/dist/engine
+engine/engine

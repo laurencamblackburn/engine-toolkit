@@ -59,7 +59,7 @@ func (b *doubleTimeBackoff) Do(f func() error) error {
 
 type nilBackoff struct{}
 
-// NewNilBackoff it just calls the function, it usefull for testing
+// NewNilBackoff it just calls the function, it is usefull for testing
 func newNilBackoff() retrier {
 	return nilBackoff{}
 }
