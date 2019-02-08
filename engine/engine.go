@@ -22,6 +22,8 @@ type Engine struct {
 	producer Producer
 	consumer Consumer
 
+	testMode bool
+
 	client   *http.Client
 	logDebug func(args ...interface{})
 
@@ -59,8 +61,13 @@ func (e *Engine) Run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "isTrainingTask")
 	}
+	if e.testMode {
+		go e.runTestConsole(ctx)
+		e.logDebug("running subprocess for testing...")
+		return e.runSubprocessOnly(ctx)
+	}
 	if isTraining {
-		e.logDebug("running subprocess...")
+		e.logDebug("running subprocess for training...")
 		return e.runSubprocessOnly(ctx)
 	}
 	e.logDebug("running inference...")
@@ -70,6 +77,9 @@ func (e *Engine) Run(ctx context.Context) error {
 // runSubprocessOnly starts the subprocess and doesn't do anything else.
 // This is used for training tasks.
 func (e *Engine) runSubprocessOnly(ctx context.Context) error {
+	if len(e.Config.Subprocess.Arguments) < 1 {
+		return errors.New("not enough arguments to run subprocess")
+	}
 	cmd := exec.CommandContext(ctx, e.Config.Subprocess.Arguments[0], e.Config.Subprocess.Arguments[1:]...)
 	cmd.Stdout = e.Config.Stdout
 	cmd.Stderr = e.Config.Stderr
@@ -93,8 +103,6 @@ func (e *Engine) runInference(ctx context.Context) error {
 		if err := cmd.Start(); err != nil {
 			return errors.Wrap(err, e.Config.Subprocess.Arguments[0])
 		}
-		// TODO: we need to know if the subprocess crashes, and maybe we cancel the context
-		// and report a failure.
 		readyCtx, cancel := context.WithTimeout(ctx, e.Config.Subprocess.ReadyTimeout)
 		defer cancel()
 		e.logDebug("waiting for ready... will expire after", e.Config.Subprocess.ReadyTimeout)

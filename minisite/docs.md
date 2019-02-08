@@ -10,8 +10,8 @@ To deploy an engine into production, you will need to perform the following task
 
 1. [Build your engine executable](#how-to-build-an-engine)
 1. [Consume HTTP webhooks to provide integration and respond with appropriate JSON](#webhooks)
-1. [Write tests for your code](#testing-your-webhooks)
 1. [Download the Engine Toolkit SDK](#download-the-engine-toolkit-sdk)
+1. [Write tests for your code](#testing-your-webhooks)
 1. [Write a `Dockerfile` which describes your engine](#writing-a-dockerfile)
 1. [Deploy your engine to the Veritone platform](#deploy-to-veritone)
 
@@ -138,15 +138,46 @@ If your engine is not going to process a chunk, the Process webhook should retur
 
 The Engine Toolkit will report the chunk as ignored.
 
-## Testing your webhooks
-
-Since the [Webhooks](#webhooks) are just HTTP endpoints, you can test them by making your own HTTP requests directly.
-
 ## Download the Engine Toolkit SDK
 
 To get started, you need to download the Engine Toolkit SDK. It contains tools that will be bundled into the Docker container when you deploy your engine to the Veritone platform.
 
 * [Download the Engine Toolkit SDK from our GitHub project](https://github.com/veritone/engine-toolkit/releases/latest)
+
+## Testing your webhooks
+
+Since the [Webhooks](#webhooks) are just HTTP endpoints, you can test them by HTTP requests directly
+to your own code.
+
+If you want to manually test the Webhooks, you can access the built-in [Engine Toolkit Test Console](#engine-toolkit-test-console).
+
+### Engine Toolkit Test Console
+
+The Engine Toolkit Test Console is a web based tool that lets you simulate the HTTP
+requests that your engine will receive in production.
+
+The following is a preview of the test console running in the browser:
+
+![A preview of the Engine Toolkit Test Console](/veritone/engine-toolkit/static/test-console-preview.png)
+
+You can upload your own file to process, and use the web form to tune the parameters
+that your engine expects to support.
+
+#### Access the Engine Toolkit Test Console
+
+To access the test console, run your Docker container with the `docker run` command. Set the environment variable `VERITONE_TESTMODE=true` and expose port 9090 with the `-p 9090:9090` argument.
+
+For example, you might run:
+
+```go
+docker build -f Dockerfile -t your-engine .
+docker run -e "VERITONE_TESTMODE=true" -p 9090:9090 -p 8080:8080 --name your-engine -t your-engine
+```
+
+Once the container is running, you can open a browser at `http://localhost:9090/` to access
+the Engine Toolkit Test Console and use it to interact with your engine.
+
+> **Do not** set the `VERITONE_TESTMODE` environment variable in your `Dockerfile` as there is a risk it could be deployed to production in test mode, which will prevent your engine from working.
 
 ## Writing a `Dockerfile`
 

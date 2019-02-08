@@ -39,13 +39,22 @@ func main() {
 
 func run(ctx context.Context) error {
 	eng := NewEngine()
-	eng.logDebug("running engine", BuildTag)
-	defer eng.logDebug("done")
+	eng.logDebug("engine: running")
+	defer eng.logDebug("engine: stopped")
+	skipKafka := false
 	isTraining, err := isTrainingTask()
 	if err != nil {
 		eng.logDebug("assuming processing task because isTrainingTask error:", err)
 	}
-	if !isTraining {
+	if isTraining {
+		skipKafka = true
+	}
+	if os.Getenv("VERITONE_TESTMODE") == "true" {
+		eng.logDebug("WARNING: Test mode (remove VERITONE_TESTMODE before putting into production)")
+		skipKafka = true
+		eng.testMode = true
+	}
+	if !skipKafka {
 		eng.logDebug("brokers:", eng.Config.Kafka.Brokers)
 		eng.logDebug("consumer group:", eng.Config.Kafka.ConsumerGroup)
 		eng.logDebug("input topic:", eng.Config.Kafka.InputTopic)

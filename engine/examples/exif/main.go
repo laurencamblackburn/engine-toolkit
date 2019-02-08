@@ -12,7 +12,7 @@ import (
 
 func main() {
 	if err := http.ListenAndServe("0.0.0.0:8080", newServer()); err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err)
+		fmt.Fprintf(os.Stderr, "exif: %s", err)
 		os.Exit(1)
 	}
 }
@@ -29,17 +29,17 @@ func newServer() *http.ServeMux {
 func handleProcess(w http.ResponseWriter, r *http.Request) {
 	startOffsetMS, err := strconv.Atoi(r.FormValue("startOffsetMS"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "exif: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	endOffsetMS, err := strconv.Atoi(r.FormValue("endOffsetMS"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "exif: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	f, _, err := r.FormFile("chunk")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "exif: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	defer f.Close()
