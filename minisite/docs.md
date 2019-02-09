@@ -165,7 +165,9 @@ that your engine expects to support.
 
 #### Access the Engine Toolkit Test Console
 
-To access the test console, run your Docker container with the `docker run` command. Set the environment variable `VERITONE_TESTMODE=true` and expose port 9090 with the `-p 9090:9090` argument.
+To access the test console, run your Docker container with the `docker run` command. Set the environment variable `VERITONE_TESTMODE=true` and expose port 9090 with the `-p 9090:9090` argument:
+
+> `-e "VERITONE_TESTMODE=true" -p 9090:9090`
 
 For example, you might run:
 
@@ -340,3 +342,23 @@ To calculate the `x` and `y` ratio values, you divide `x` by the width and `y` b
 ratioX = x / width
 ratioY = y / height
 ```
+
+# Troubleshooting
+
+This section provides answers to common problems that have been reported by
+engine developers.
+
+## `x509: certificate signed by unknown authority`
+
+If you see an error complaining about an unknown authority, it's likely that you do not have
+root certificates installed inside your Docker container.
+
+Try adding the following line to your `Dockerfile`:
+
+```docker
+RUN apk --no-cache add ca-certificates
+```
+
+This will install the certificates as part of your Docker build.
+
+> This solution has only been tested when the base Docker image is `FROM alpine:latest`. For other base images, you might need to install them with a different command.
