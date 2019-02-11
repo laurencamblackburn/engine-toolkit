@@ -177,6 +177,7 @@ type seriesObject struct {
 
 type object struct {
 	Label        string   `json:"label"`
+	Text         string   `json:"text"`
 	ObjectType   string   `json:"type"`
 	URI          string   `json:"uri"`
 	EntityID     string   `json:"entityId,omitempty"`
