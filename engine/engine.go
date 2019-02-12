@@ -200,7 +200,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		e.Config.Webhooks.Backoff.MaxBackoffDuration,
 		e.Config.Webhooks.Backoff.MaxRetries,
 	)
-	var engineOutputContent engineOutput
+	var content []byte
 	err := retry.Do(func() error {
 		req, err := newRequestFromMediaChunk(e.client, e.Config.Webhooks.Process.URL, mediaChunk)
 		if err != nil {
@@ -224,9 +224,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 			return errors.Errorf("%d: %s", resp.StatusCode, buf.String())
 		}
 		if buf.Len() > 0 {
-			if err := json.NewDecoder(&buf).Decode(&engineOutputContent); err != nil {
-				return errors.Wrap(err, "decode response")
-			}
+			content = buf.Bytes()
 		}
 		return nil
 	})
@@ -240,13 +238,6 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 	if ignoreChunk {
 		finalUpdateMessage.Status = chunkStatusIgnored
 		return nil
-	}
-	content, err := json.Marshal(engineOutputContent)
-	if err != nil {
-		err = errors.Wrap(err, "json: marshal engine output content")
-		finalUpdateMessage.Status = chunkStatusError
-		finalUpdateMessage.ErrorMsg = err.Error()
-		return err
 	}
 	// send output message
 	outputMessage := mediaChunkMessage{
