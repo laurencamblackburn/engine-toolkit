@@ -347,3 +347,19 @@ type coords struct {
 	X float64 `json:"x"`
 	Y float64 `json:"y"`
 }
+
+type engineOutputMessage struct {
+	Type          messageType `json:"type"`
+	TimestampUTC  int64       `json:"timestampUTC"`
+	OuputType     string      `json:"ouputType"`
+	MIMEType      string      `json:"mimeType"`
+	TaskID        string      `json:"taskId"`
+	TDOID         string      `json:"tdoId"`
+	JobID         string      `json:"jobId"`
+	StartOffsetMS int         `json:"startOffsetMs"`
+	EndOffsetMS   int         `json:"endOffsetMs"`
+	Content       string      `json:"content,omitempty"`
+	Rev           int64       `json:"rev"`
+	TaskPayload   payload     `json:"taskPayload"`
+	ChunkUUID     string      `json:"chunkUUID"`
+}

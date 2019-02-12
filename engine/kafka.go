@@ -141,56 +141,6 @@ type chunkProcessedStatus struct {
 	InfoMsg      string      `json:"infoMsg,omitempty"`      // Optional message for anything engine wishes to report
 }
 
-type engineOutputMessage struct {
-	Type          messageType `json:"type"`
-	TimestampUTC  int64       `json:"timestampUTC"`
-	OuputType     string      `json:"ouputType"`
-	MIMEType      string      `json:"mimeType"`
-	TaskID        string      `json:"taskId"`
-	TDOID         string      `json:"tdoId"`
-	JobID         string      `json:"jobId"`
-	StartOffsetMS int         `json:"startOffsetMs"`
-	EndOffsetMS   int         `json:"endOffsetMs"`
-	Content       string      `json:"content,omitempty"`
-	Rev           int64       `json:"rev"`
-	TaskPayload   payload     `json:"taskPayload"`
-	ChunkUUID     string      `json:"chunkUUID"`
-}
-
-// type engineOutput struct {
-// 	// SourceEngineID   string         `json:"sourceEngineId,omitempty"`
-// 	// SourceEngineName string         `json:"sourceEngineName,omitempty"`
-// 	// TaskPayload      payload        `json:"taskPayload,omitempty"`
-// 	// TaskID           string         `json:"taskId"`
-// 	// EntityID         string         `json:"entityId,omitempty"`
-// 	// LibraryID        string         `json:"libraryId"`
-// 	Series []seriesObject `json:"series"`
-// }
-
-// type seriesObject struct {
-// 	Start     int    `json:"startTimeMs"`
-// 	End       int    `json:"stopTimeMs"`
-// 	EntityID  string `json:"entityId"`
-// 	LibraryID string `json:"libraryId"`
-// 	Object    object `json:"object"`
-// }
-
-// type object struct {
-// 	Label        string   `json:"label"`
-// 	Text         string   `json:"text"`
-// 	ObjectType   string   `json:"type"`
-// 	URI          string   `json:"uri"`
-// 	EntityID     string   `json:"entityId,omitempty"`
-// 	LibraryID    string   `json:"libraryId,omitempty"`
-// 	Confidence   float64  `json:"confidence"`
-// 	BoundingPoly []coords `json:"boundingPoly"`
-// }
-
-// type coords struct {
-// 	X float64 `json:"x"`
-// 	Y float64 `json:"y"`
-// }
-
 type payload struct {
 	ApplicationID        string `json:"applicationId"`
 	JobID                string `json:"jobId"`
