@@ -24,6 +24,7 @@ func (e *Engine) runTestConsole(context.Context) {
 	Go to: http://localhost:9090/`)
 	processWebhookProxy := reverseProxy(os.Getenv("VERITONE_WEBHOOK_PROCESS"))
 	readyWebhookProxy := reverseProxy(os.Getenv("VERITONE_WEBHOOK_READY"))
+	handleManifest := e.handleManifest("/var/manifest.json")
 	if err := http.ListenAndServe("0.0.0.0:9090", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/":
@@ -33,7 +34,7 @@ func (e *Engine) runTestConsole(context.Context) {
 		case "/api/engine/ready":
 			readyWebhookProxy.ServeHTTP(w, r)
 		case "/api/engine/manifest.json":
-			e.handleManifest(w, r)
+			handleManifest(w, r)
 		case "/api/engine/env-vars":
 			e.handleEnvVars(w, r)
 		default:
@@ -44,28 +45,34 @@ func (e *Engine) runTestConsole(context.Context) {
 	}
 }
 
-func (e *Engine) handleManifest(w http.ResponseWriter, r *http.Request) {
-	f, err := os.Open("/var/manifest.json")
-	if err != nil {
-		if os.IsNotExist(err) {
-			http.Error(w, "Missing manifest.json", http.StatusInternalServerError)
+func (e *Engine) handleManifest(file string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		f, err := os.Open(file)
+		if err != nil {
+			if os.IsNotExist(err) {
+				http.Error(w, "Missing manifest.json", http.StatusInternalServerError)
+				return
+			}
+			http.Error(w, "Could not open manifest.json", http.StatusInternalServerError)
 			return
 		}
-		http.Error(w, "Could not open manifest.json", http.StatusInternalServerError)
-		return
-	}
-	defer f.Close()
-	var m map[string]interface{}
-	err = json.NewDecoder(f).Decode(&m)
-	if err != nil {
-		http.Error(w, "Could not read manifest.json: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(m)
-	if err != nil {
-		http.Error(w, "Could not encode manifest.json: "+err.Error(), http.StatusInternalServerError)
-		return
+		defer f.Close()
+		var m map[string]interface{}
+		err = json.NewDecoder(f).Decode(&m)
+		if err != nil {
+			http.Error(w, "Could not read manifest.json: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if m["engineMode"] != "chunk" {
+			http.Error(w, fmt.Sprintf("manifest.json: engineMode: should be \"chunk\" not %q", m["engineMode"]), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		err = json.NewEncoder(w).Encode(m)
+		if err != nil {
+			http.Error(w, "Could not encode manifest.json: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 }
 
@@ -220,7 +227,7 @@ const consoleHTML = `<html>
 					</p>
 					<p class='padding'>
 						<span style='display:none;' class='tag is-medium is-danger manifest-error only-when-manifest-not-ok'></span>
-						<span style='display:none;' class='tag is-medium is-success only-when-manifest-ok'>DETECTED</span>
+						<span style='display:none;' class='tag is-medium is-success only-when-manifest-ok'>LOOKS GOOD</span>
 					</p>
 					<h1 id='Environment variables'>Environment variables</h1>
 					<p>

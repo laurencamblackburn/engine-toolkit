@@ -1,0 +1,19 @@
+{
+	"engineId": "123",
+	"url": "https://machinebox.io/",
+	"category": "textRecognition",
+	"externalCalls": [
+		"https://machinebox.io"
+	],
+	"preferredInputFormat": "image/jpeg",
+	"engineMode": "chunk",
+	"supportedInputFormats": [
+		"image/jpeg"
+	],
+	"outputFormats": [
+		"application/json"
+	],
+	"clusterSize": "medium",
+	"intialConcurrency": 50,
+	"maxConcurrency": 50
+}
