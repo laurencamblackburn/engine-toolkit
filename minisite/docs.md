@@ -140,7 +140,9 @@ The Engine Toolkit will report the chunk as ignored.
 
 ## Download the Engine Toolkit SDK
 
-To get started, you need to download the Engine Toolkit SDK. It contains tools that will be bundled into the Docker container when you deploy your engine to the Veritone platform.
+To get started, you need to download the Engine Toolkit SDK. It contains the `engine` binrary that will be bundled into the Docker container when you deploy your engine to the Veritone platform.
+
+> **Did you know?** You only need to download the [latest release](https://github.com/veritone/engine-toolkit/releases/latest), there's no need to clone the repo.
 
 * [Download the Engine Toolkit SDK from our GitHub project](https://github.com/veritone/engine-toolkit/releases/latest)
 
