@@ -175,8 +175,8 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 	if err := json.Unmarshal(msg.Value, &mediaChunk); err != nil {
 		return errors.Wrap(err, "unmarshal message value JSON")
 	}
-	finalUpdateMessage := chunkProcessedStatus{
-		Type:      messageTypeChunkProcessedStatus,
+	finalUpdateMessage := chunkResult{
+		Type:      messageTypeChunkResult,
 		TaskID:    mediaChunk.TaskID,
 		ChunkUUID: mediaChunk.ChunkUUID,
 		Status:    chunkStatusSuccess, // optimistic
@@ -239,8 +239,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		finalUpdateMessage.Status = chunkStatusIgnored
 		return nil
 	}
-	// send output message
-	outputMessage := mediaChunkMessage{
+	outputMessage := &mediaChunkMessage{
 		Type:          messageTypeEngineOutput,
 		TaskID:        mediaChunk.TaskID,
 		JobID:         mediaChunk.JobID,
@@ -249,17 +248,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		EndOffsetMS:   mediaChunk.EndOffsetMS,
 		Content:       string(content),
 	}
-	_, _, err = e.producer.SendMessage(&sarama.ProducerMessage{
-		Topic: e.Config.Kafka.ChunkTopic,
-		Key:   sarama.ByteEncoder(msg.Key),
-		Value: newJSONEncoder(outputMessage),
-	})
-	if err != nil {
-		err = errors.Wrapf(err, "SendMessage: %q %s %s", e.Config.Kafka.ChunkTopic, messageTypeEngineOutput, err)
-		finalUpdateMessage.Status = chunkStatusError
-		finalUpdateMessage.ErrorMsg = err.Error()
-		return err
-	}
+	finalUpdateMessage.EngineOutput = outputMessage
 	return nil
 }
 

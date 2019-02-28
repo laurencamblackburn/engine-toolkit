@@ -75,24 +75,7 @@ func TestProcessingChunk(t *testing.T) {
 	is.NoErr(err)
 
 	var outputMsg *sarama.ConsumerMessage
-	var chunkProcessedStatus chunkProcessedStatus
-
-	// check for the final chunk output message
-	select {
-	case outputMsg = <-outputPipe.Messages():
-	case <-time.After(1 * time.Second):
-		is.Fail() // timed out
-		return
-	}
-	is.Equal(string(outputMsg.Key), inputMessage.TaskID)      // output message key must be TaskID
-	is.Equal(outputMsg.Topic, engine.Config.Kafka.ChunkTopic) // chunk topic
-	var engineOutputMessage engineOutputMessage
-	err = json.Unmarshal(outputMsg.Value, &engineOutputMessage)
-	is.Equal(engineOutputMessage.Type, messageTypeEngineOutput)
-	is.Equal(engineOutputMessage.TaskID, inputMessage.TaskID)
-	is.Equal(engineOutputMessage.ChunkUUID, inputMessage.ChunkUUID)
-	is.Equal(engineOutputMessage.StartOffsetMS, 1000)
-	is.Equal(engineOutputMessage.EndOffsetMS, 2000)
+	var chunkResult chunkResult
 
 	// read the chunk success message
 	select {
@@ -103,20 +86,25 @@ func TestProcessingChunk(t *testing.T) {
 	}
 	is.Equal(string(outputMsg.Key), inputMessage.TaskID)      // output message key must be TaskID
 	is.Equal(outputMsg.Topic, engine.Config.Kafka.ChunkTopic) // chunk topic
-	err = json.Unmarshal(outputMsg.Value, &chunkProcessedStatus)
+	err = json.Unmarshal(outputMsg.Value, &chunkResult)
 	is.NoErr(err)
-	is.Equal(chunkProcessedStatus.ErrorMsg, "")
-	is.Equal(chunkProcessedStatus.Type, messageTypeChunkProcessedStatus)
-	is.Equal(chunkProcessedStatus.TaskID, inputMessage.TaskID)
-	is.Equal(chunkProcessedStatus.ChunkUUID, inputMessage.ChunkUUID)
-	is.Equal(chunkProcessedStatus.Status, chunkStatusSuccess)
+	is.Equal(chunkResult.ErrorMsg, "")
+	is.Equal(chunkResult.Type, messageTypeChunkResult)
+	is.Equal(chunkResult.TaskID, inputMessage.TaskID)
+	is.Equal(chunkResult.ChunkUUID, inputMessage.ChunkUUID)
+	is.Equal(chunkResult.Status, chunkStatusSuccess)
+
+	is.Equal(chunkResult.EngineOutput.Type, messageTypeEngineOutput)
+	is.Equal(chunkResult.EngineOutput.TaskID, inputMessage.TaskID)
+	is.Equal(chunkResult.EngineOutput.ChunkUUID, inputMessage.ChunkUUID)
+	is.Equal(chunkResult.EngineOutput.StartOffsetMS, 1000)
+	is.Equal(chunkResult.EngineOutput.EndOffsetMS, 2000)
 
 	var output engineOutput
-	err = json.Unmarshal([]byte(engineOutputMessage.Content), &output)
+	err = json.Unmarshal([]byte(chunkResult.EngineOutput.Content), &output)
 	is.NoErr(err)
 	is.Equal(len(output.Series), 1)
 	is.Equal(output.Series[0].Object.Label, "something")
-
 	is.Equal(inputPipe.Offset, int64(1)) // Offset
 }
 
@@ -306,7 +294,7 @@ func TestIgnoredChunks(t *testing.T) {
 	err = json.Unmarshal(outputMsg.Value, &chunkProcessedStatus)
 	is.NoErr(err)
 	is.Equal(chunkProcessedStatus.ErrorMsg, "")
-	is.Equal(chunkProcessedStatus.Type, messageTypeChunkProcessedStatus)
+	is.Equal(chunkProcessedStatus.Type, messageTypeChunkResult)
 	is.Equal(chunkProcessedStatus.TaskID, inputMessage.TaskID)
 	is.Equal(chunkProcessedStatus.ChunkUUID, inputMessage.ChunkUUID)
 	is.Equal(chunkProcessedStatus.Status, chunkStatusIgnored)
