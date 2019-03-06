@@ -122,10 +122,10 @@ func (e *Engine) runInference(ctx context.Context) error {
 				if !ok {
 					return
 				}
+				e.consumer.MarkOffset(msg, "")
 				if err := e.processMessage(ctx, msg); err != nil {
 					e.logDebug(fmt.Sprintf("processing error: %v", err))
 				}
-				e.consumer.MarkOffset(msg, "")
 			case <-time.After(e.Config.EndIfIdleDuration):
 				e.logDebug(fmt.Sprintf("idle for %s", e.Config.EndIfIdleDuration))
 				return
