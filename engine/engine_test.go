@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -312,6 +314,35 @@ func TestIgnoredChunks(t *testing.T) {
 	is.Equal(chunkProcessedStatus.Status, chunkStatusIgnored)
 
 	is.Equal(inputPipe.Offset, int64(1)) // Offset
+}
+
+func TestSubprocessCrash(t *testing.T) {
+	is := is.New(t)
+
+	engine := NewEngine()
+	engine.Config.Subprocess.Arguments = []string{"./testdata/subprocesses/crash.sh"}
+	engine.Config.Kafka.ChunkTopic = "chunk-topic"
+	engine.logDebug = func(args ...interface{}) {
+		log.Println(args...)
+	}
+	readySrv := newOKServer()
+	defer readySrv.Close()
+	engine.Config.Webhooks.Ready.URL = readySrv.URL
+	inputPipe := newPipe()
+	defer inputPipe.Close()
+	outputPipe := newPipe()
+	defer outputPipe.Close()
+	engine.consumer = inputPipe
+	engine.producer = outputPipe
+
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	err := engine.Run(ctx)
+	is.True(err != nil)
+	is.True(strings.Contains(err.Error(), "exit status 123"))
+
 }
 
 type engineOutput struct {
