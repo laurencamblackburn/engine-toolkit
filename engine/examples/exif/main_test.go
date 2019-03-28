@@ -55,7 +55,7 @@ func TestProcess(t *testing.T) {
 const expectedOutput = `{
 	"series": [{
 		"startTimeMs": 1000,
-		"endTimeMs": 2000,
+		"stopTimeMs": 2000,
 		"vendor": {
 			"exif": {
 				"ApertureValue": ["368640/65536"],

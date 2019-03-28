@@ -98,7 +98,7 @@ The following JSON is an example showing some faces that were found in the image
 {
 	"series": [{
 		"startTimeMs": 1000,
-		"endTimeMs": 2000,
+		"stopTimeMs": 2000,
 		"object": {
 			"type": "face",
 			"confidence": 0.95,
@@ -109,7 +109,7 @@ The following JSON is an example showing some faces that were found in the image
 		}
 	}, {
 		"startTimeMs": 5000,
-		"endTimeMs": 6000,
+		"stopTimeMs": 6000,
 		"object": {
 			"type": "face",
 			"confidence": 0.95,
@@ -124,7 +124,7 @@ The following JSON is an example showing some faces that were found in the image
 
 * `series` - (array) List of items found
 * `series[].startTimeMs` - (int) The start time of the chunk
-* `series[].endTimeMs` - (int) The end time of the chunk
+* `series[].stopTimeMs` - (int) The end time of the chunk
 * `series[].object` - (object) An object describing what was found
 * `series[].object.type` - (string) The type of the object
 * `series[].object.confidence` - (number) A number `0-1` of how confident the engine is about this object
