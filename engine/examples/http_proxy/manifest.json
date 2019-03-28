@@ -1,0 +1,17 @@
+{
+	"engineId": "INSERT_YOUR_ENGINE_ID_HERE",
+	"url": "https://veritone.com/",
+	"category": "objectRecognition",
+	"preferredInputFormat": "image/jpeg",
+	"engineMode": "chunk",
+	"supportedInputFormats": [
+		"image/gif",
+		"image/jpeg"
+	],
+	"outputFormats": [
+		"application/json"
+	],
+	"clusterSize": "small",
+	"intialConcurrency": 50,
+	"maxConcurrency": 50
+}
