@@ -138,6 +138,13 @@ If your engine is not going to process a chunk, the Process webhook should retur
 
 The Engine Toolkit will report the chunk as ignored.
 
+#### Failed responses
+
+If the chunk cannot be processed, the webhook should return a non-200 response code (e.g. `500`) and 
+a meaningful error should be written as the response.
+
+> There is no need to return a JSON body on failures, plain text is fine.
+
 ## Download the Engine Toolkit SDK
 
 To get started, you need to download the Engine Toolkit SDK. It contains the `engine` binrary that will be bundled into the Docker container when you deploy your engine to the Veritone platform.
