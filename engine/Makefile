@@ -8,7 +8,7 @@ release: test clean buildrelease
 buildrelease:
 	rm -rf dist
 	mkdir dist
-	GOOS=linux GOARCH=amd64 go build -ldflags "${ldflags}" -o release/bin/engine
+	GO111MODULE=on GOOS=linux GOARCH=amd64 go build -ldflags "${ldflags}" -o release/bin/engine
 	cp -a release dist/engine-toolkit-sdk-v0.1.7
 	cd dist && tar cvvzf engine-toolkit-sdk-v0.1.7.tar.gz engine-toolkit-sdk-v0.1.7
 
@@ -17,4 +17,4 @@ clean:
 	rm -f release/bin/engine
 
 test:
-	go test -v ./...
+	GO111MODULE=on go test -v ./...
