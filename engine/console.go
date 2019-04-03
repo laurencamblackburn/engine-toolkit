@@ -293,9 +293,9 @@ const consoleHTML = `<html>
 						</div>
 						<div class='column'>
 							<div class='field'>
-								<label class='label'><code>endOffsetMS</code></label>
+								<label class='label'><code>stopOffsetMS</code></label>
 								<div class='control'>
-									<input class='input' name='endOffsetMS' type='number' value='2000'>
+									<input class='input' name='stopOffsetMS' type='number' value='2000'>
 								</div>
 							</div>
 						</div>
