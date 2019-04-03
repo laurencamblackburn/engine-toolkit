@@ -30,6 +30,39 @@ type Engine struct {
 	// Config holds the Engine configuration.
 	Config Config
 }
+type engineOutput struct {
+	// SourceEngineID   string         `json:"sourceEngineId,omitempty"`
+	// SourceEngineName string         `json:"sourceEngineName,omitempty"`
+	// TaskPayload      payload        `json:"taskPayload,omitempty"`
+	// TaskID           string         `json:"taskId"`
+	// EntityID         string         `json:"entityId,omitempty"`
+	// LibraryID        string         `json:"libraryId"`
+	Series []seriesObject `json:"series"`
+}
+
+type seriesObject struct {
+	Start     int    `json:"startTimeMs"`
+	End       int    `json:"stopTimeMs"`
+	EntityID  string `json:"entityId"`
+	LibraryID string `json:"libraryId"`
+	Object    object `json:"object"`
+}
+
+type object struct {
+	Label        string   `json:"label"`
+	Text         string   `json:"text"`
+	ObjectType   string   `json:"type"`
+	URI          string   `json:"uri"`
+	EntityID     string   `json:"entityId,omitempty"`
+	LibraryID    string   `json:"libraryId,omitempty"`
+	Confidence   float64  `json:"confidence"`
+	BoundingPoly []coords `json:"boundingPoly"`
+}
+
+type coords struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+}
 
 // NewEngine makes a new Engine with the specified Consumer and Producer.
 func NewEngine() *Engine {
@@ -201,6 +234,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		e.Config.Webhooks.Backoff.MaxRetries,
 	)
 	var content []byte
+	var engineOutputContent engineOutput
 	err := retry.Do(func() error {
 		req, err := newRequestFromMediaChunk(e.client, e.Config.Webhooks.Process.URL, mediaChunk)
 		if err != nil {
@@ -223,8 +257,13 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		if resp.StatusCode != http.StatusOK {
 			return errors.Errorf("%d: %s", resp.StatusCode, buf.String())
 		}
+
 		if buf.Len() > 0 {
-			content = buf.Bytes()
+			if err := json.NewDecoder(&buf).Decode(&engineOutputContent); err != nil {
+				return errors.Wrap(err, "decode response")
+			} else {
+				e.logDebug("Toolkit got output from openalpr", buf.String())
+			}
 		}
 		return nil
 	})
@@ -239,6 +278,10 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		finalUpdateMessage.Status = chunkStatusIgnored
 		return nil
 	}
+	content, err = json.Marshal(engineOutputContent)
+	if err != nil {
+		return errors.Wrap(err, "json: marshal engine output content")
+	}
 	// send output message
 	outputMessage := mediaChunkMessage{
 		Type:          messageTypeEngineOutput,
@@ -249,6 +292,9 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		EndOffsetMS:   mediaChunk.EndOffsetMS,
 		Content:       string(content),
 	}
+
+	tmp, _ := json.Marshal(outputMessage)
+	e.logDebug("outputMessage will be sent to kafka: ", string(tmp))
 	_, _, err = e.producer.SendMessage(&sarama.ProducerMessage{
 		Topic: e.Config.Kafka.ChunkTopic,
 		Key:   sarama.ByteEncoder(msg.Key),
