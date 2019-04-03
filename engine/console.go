@@ -430,7 +430,7 @@ const consoleHTML = `<html>
 			<div class='column'>
 				<p>
 					<strong>This is a BETA release</strong> of the Engine Toolkit SDK.
-					While there are engines currently running in production build using this toolkit,
+					While there are engines currently running in production built using this toolkit,
 					some features might be changed in backward-incompatible ways and are not subject to any SLA or deprecation policy.
 				</p>
 			</div>
