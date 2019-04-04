@@ -257,13 +257,14 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		if resp.StatusCode != http.StatusOK {
 			return errors.Errorf("%d: %s", resp.StatusCode, buf.String())
 		}
-
+		e.logDebug("Toolkit got output from openalpr", buf.String())
 		if buf.Len() > 0 {
 			if err := json.NewDecoder(&buf).Decode(&engineOutputContent); err != nil {
 				return errors.Wrap(err, "decode response")
-			} else {
-				e.logDebug("Toolkit got output from openalpr", buf.String())
 			}
+		} else { // This prevent toolkit sending null data to Kafka
+			ignoreChunk = true
+			return nil
 		}
 		return nil
 	})
@@ -282,6 +283,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 	if err != nil {
 		return errors.Wrap(err, "json: marshal engine output content")
 	}
+	e.logDebug("Toolkit got content after json.marshal", string(content))
 	// send output message
 	outputMessage := mediaChunkMessage{
 		Type:          messageTypeEngineOutput,
@@ -290,6 +292,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		ChunkUUID:     mediaChunk.ChunkUUID,
 		StartOffsetMS: mediaChunk.StartOffsetMS,
 		EndOffsetMS:   mediaChunk.EndOffsetMS,
+		TimestampUTC:  time.Now().Unix(),
 		Content:       string(content),
 	}
 

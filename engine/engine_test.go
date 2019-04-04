@@ -175,6 +175,7 @@ func TestReadinessContextCancelled(t *testing.T) {
 	defer cancel()
 	err := engine.ready(ctx)
 	is.Equal(err, context.DeadlineExceeded)
+
 }
 
 func TestSubprocess(t *testing.T) {
