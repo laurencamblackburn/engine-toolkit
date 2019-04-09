@@ -68,6 +68,14 @@ type Config struct {
 			MaxBackoffDuration time.Duration
 		}
 	}
+	// ENGINE_INSTANCE_ID
+	EngineInstanceID string
+	// ENGINE_ID
+	EngineID string
+	//periodically reporting total time (rounded to nearest second) engine instance has been and total time processing
+	TimeToSendPeriodicMessageInDuration string
+	// Name Topic send edge message
+	EdgeEventTopic string
 }
 
 // NewConfig gets default configuration settings.
@@ -104,6 +112,12 @@ func NewConfig() Config {
 	c.Kafka.ConsumerGroup = os.Getenv("KAFKA_CONSUMER_GROUP")
 	c.Kafka.InputTopic = os.Getenv("KAFKA_INPUT_TOPIC")
 	c.Kafka.ChunkTopic = os.Getenv("KAFKA_CHUNK_TOPIC")
-
+	// engine info
+	c.EngineInstanceID = os.Getenv("ENGINE_INSTANCE_ID")
+	c.EngineID = os.Getenv("ENGINE_ID")
+	// rounded to nearest second
+	c.TimeToSendPeriodicMessageInDuration = "1m"
+	// edge event topic name
+	c.EdgeEventTopic = "events"
 	return c
 }

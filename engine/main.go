@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/Shopify/sarama"
 	"os"
 	"os/signal"
 	"syscall"
@@ -59,6 +60,8 @@ func run(ctx context.Context) error {
 		eng.logDebug("consumer group:", eng.Config.Kafka.ConsumerGroup)
 		eng.logDebug("input topic:", eng.Config.Kafka.InputTopic)
 		eng.logDebug("chunk topic:", eng.Config.Kafka.ChunkTopic)
+		eng.logDebug("engineId:", eng.Config.EngineID)
+		eng.logDebug("engine instanceId:", eng.Config.EngineInstanceID)
 		var err error
 		var cleanup func()
 		eng.consumer, cleanup, err = newKafkaConsumer(eng.Config.Kafka.Brokers, eng.Config.Kafka.ConsumerGroup, eng.Config.Kafka.InputTopic)
@@ -70,6 +73,25 @@ func run(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "kafka producer")
 		}
+		setBuidEngine(eng)
+		// Send edge event message when engine instance is ready to process work
+		edgeMessage := EmptyEdgeEventData()
+		edgeMessage.Event = EngineInstanceReady
+		edgeMessage.EventTimeUTC = getCurrentTimeEpochMs()
+		edgeMessage.Component = eng.Config.EngineID
+		edgeMessage.EngineInfo.EngineID = eng.Config.EngineID
+		edgeMessage.EngineInfo.BuildID = eng.BuildID
+		edgeMessage.EngineInfo.InstanceID =  eng.Config.EngineInstanceID
+
+		_, _, err = eng.producer.SendMessage(&sarama.ProducerMessage{
+			Topic: eng.Config.EdgeEventTopic,
+			Key:   sarama.ByteEncoder(eng.Config.EngineID),
+			Value: newJSONEncoder(edgeMessage),
+		})
+		if err != nil {
+			errors.Wrapf(err, "SendMessage: %q %s", eng.Config.EngineID, EngineInstanceReady)
+		}
+		TimeEngineInstancePeriodic(eng)
 	} else {
 		eng.logDebug("skipping kafka setup")
 	}
