@@ -258,13 +258,12 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 			return errors.Errorf("%d: %s", resp.StatusCode, buf.String())
 		}
 		e.logDebug("Toolkit got output from openalpr", buf.String())
-		if buf.Len() > 0 {
-			if err := json.NewDecoder(&buf).Decode(&engineOutputContent); err != nil {
-				return errors.Wrap(err, "decode response")
-			}
-		} else { // This prevent toolkit sending null data to Kafka
+		if buf.Len() == 0 {
 			ignoreChunk = true
 			return nil
+		}
+		if err := json.NewDecoder(&buf).Decode(&engineOutputContent); err != nil {
+			return errors.Wrap(err, "decode response")
 		}
 		return nil
 	})
