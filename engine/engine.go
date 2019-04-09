@@ -104,9 +104,6 @@ func (e *Engine) runInference(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	var cmd *exec.Cmd
-	e.logDebug("here")
-	e.logDebug(len(e.Config.Subprocess.Arguments))
-	e.logDebug("here")
 	if len(e.Config.Subprocess.Arguments) > 0 {
 		cmd = exec.CommandContext(ctx, e.Config.Subprocess.Arguments[0], e.Config.Subprocess.Arguments[1:]...)
 		cmd.Stdout = e.Config.Stdout

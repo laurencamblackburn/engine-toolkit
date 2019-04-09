@@ -308,6 +308,17 @@ func TestIgnoredChunks(t *testing.T) {
 	var outputMsg *sarama.ConsumerMessage
 	var chunkProcessedStatus chunkProcessedStatus
 
+	// read the media_chunk_consumed success message
+	select {
+	case outputMsg = <-outputPipe.Messages():
+	case <-time.After(1 * time.Second):
+		is.Fail() // timed out
+		return
+	}
+
+	is.Equal(outputMsg.Topic, engine.Config.EdgeEventTopic)  // edge event topic
+	is.Equal(string(outputMsg.Key), inputMessage.ChunkUUID)  // chunk input
+
 	// read the chunk ignore message
 	select {
 	case outputMsg = <-outputPipe.Messages():
@@ -315,15 +326,15 @@ func TestIgnoredChunks(t *testing.T) {
 		is.Fail() // timed out
 		return
 	}
-	//is.Equal(string(outputMsg.Key), inputMessage.TaskID)      // output message key must be TaskID
-	//is.Equal(outputMsg.Topic, engine.Config.Kafka.ChunkTopic) // chunk topic
+	is.Equal(string(outputMsg.Key), inputMessage.TaskID)      // output message key must be TaskID
+	is.Equal(outputMsg.Topic, engine.Config.Kafka.ChunkTopic) // chunk topic
 	err = json.Unmarshal(outputMsg.Value, &chunkProcessedStatus)
 	is.NoErr(err)
 	is.Equal(chunkProcessedStatus.ErrorMsg, "")
-	//is.Equal(chunkProcessedStatus.Type, messageTypeChunkProcessedStatus)
+	is.Equal(chunkProcessedStatus.Type, messageTypeChunkProcessedStatus)
 	is.Equal(chunkProcessedStatus.TaskID, inputMessage.TaskID)
-	//is.Equal(chunkProcessedStatus.ChunkUUID, inputMessage.ChunkUUID)
-	//is.Equal(chunkProcessedStatus.Status, chunkStatusIgnored)
+	is.Equal(chunkProcessedStatus.ChunkUUID, inputMessage.ChunkUUID)
+	is.Equal(chunkProcessedStatus.Status, chunkStatusIgnored)
 
 	is.Equal(inputPipe.Offset, int64(1)) // Offset
 }
