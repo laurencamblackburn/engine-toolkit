@@ -257,7 +257,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		if resp.StatusCode != http.StatusOK {
 			return errors.Errorf("%d: %s", resp.StatusCode, buf.String())
 		}
-		e.logDebug("Toolkit got output from openalpr", buf.String())
+		e.logDebug("toolkit: got output:", buf.String())
 		if buf.Len() == 0 {
 			ignoreChunk = true
 			return nil
