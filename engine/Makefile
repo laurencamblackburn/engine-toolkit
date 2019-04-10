@@ -1,5 +1,5 @@
 githash = $(shell git rev-parse --short HEAD)
-ldflags = -X github.com/veritone/engine-tool/engine.BuildTag=$(githash)
+ldflags = -X github.com/veritone/engine-toolkit/engine.BuildTag=$(githash)
 
 .PHONY: clean test buildrelease release
 
@@ -9,8 +9,8 @@ buildrelease:
 	rm -rf dist
 	mkdir dist
 	GO111MODULE=on GOOS=linux GOARCH=amd64 go build -ldflags "${ldflags}" -o release/bin/engine
-	cp -a release dist/engine-toolkit-sdk-v0.1.8
-	cd dist && tar cvvzf engine-toolkit-sdk-v0.1.8.tar.gz engine-toolkit-sdk-v0.1.8
+	cp -a release dist/engine-toolkit-sdk-v0.1.9
+	cd dist && tar cvvzf engine-toolkit-sdk-v0.1.9.tar.gz engine-toolkit-sdk-v0.1.9
 
 clean:
 	rm -rf dist
