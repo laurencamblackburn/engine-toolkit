@@ -6,7 +6,7 @@ builddocker:
 	docker build -f Dockerfile -t pyimagenet .
 
 buildengine:
-	GOOS=linux GOARCH=amd64 go build -ldflags "${ldflags}" -o ./dist/engine ../../
+	GO111MODULE=on GOOS=linux GOARCH=amd64 go build -ldflags "${ldflags}" -o ./dist/engine ../../
 
 weights:
 	test -s ./weights/resnet50_weights_tf_dim_ordering_tf_kernels.h5 || wget -P weights https://github.com/fchollet/deep-learning-models/releases/download/v0.2/resnet50_weights_tf_dim_ordering_tf_kernels.h5
