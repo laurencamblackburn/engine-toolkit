@@ -1,5 +1,5 @@
 githash = $(shell git rev-parse --short HEAD)
-ldflags = -X github.com/veritone/engine-toolkit/engine.BuildTag=$(githash)
+ldflags = -X github.com/veritone/engine-toolkit/main.BuildTag=$(githash)
 
 .PHONY: clean test buildrelease release
 
