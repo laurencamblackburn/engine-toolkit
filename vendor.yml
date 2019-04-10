@@ -1,0 +1,3 @@
+vendors:
+  - path: github.com/veritone/edge-messages
+    rev: 4d13a446c61eaa1f9a894f567755b17432f0f1fa

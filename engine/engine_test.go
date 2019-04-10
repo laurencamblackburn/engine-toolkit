@@ -15,6 +15,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/matryer/is"
+	"github.com/satori/go.uuid"
 )
 
 // TestProcessingChunk tests the entire end to end flow of processing
@@ -416,4 +417,12 @@ type engineOutputMessage struct {
 	Rev           int64       `json:"rev"`
 	TaskPayload   payload     `json:"taskPayload"`
 	ChunkUUID     string      `json:"chunkUUID"`
+}
+
+func uuidv4() string {
+	id, err := uuid.NewV4()
+	if err != nil {
+		return "12345678-90ab-cdef-1234-567809ab"
+	}
+	return id.String()
 }
