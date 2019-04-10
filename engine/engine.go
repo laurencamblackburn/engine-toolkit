@@ -257,7 +257,6 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		if resp.StatusCode != http.StatusOK {
 			return errors.Errorf("%d: %s", resp.StatusCode, buf.String())
 		}
-		e.logDebug("toolkit: got output:", buf.String())
 		if buf.Len() == 0 {
 			ignoreChunk = true
 			return nil
@@ -282,7 +281,6 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 	if err != nil {
 		return errors.Wrap(err, "json: marshal engine output content")
 	}
-	e.logDebug("Toolkit got content after json.marshal", string(content))
 	// send output message
 	outputMessage := mediaChunkMessage{
 		Type:          messageTypeEngineOutput,
