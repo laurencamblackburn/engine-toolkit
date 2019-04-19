@@ -215,7 +215,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		Status:    chunkStatusSuccess, // optimistic
 	}
 	defer func() {
-		// send the final message
+		// send the final (ChunkResult) message
 		finalUpdateMessage.TimestampUTC = time.Now().Unix()
 		_, _, err := e.producer.SendMessage(&sarama.ProducerMessage{
 			Topic: e.Config.Kafka.ChunkTopic,
@@ -292,20 +292,10 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		TimestampUTC:  time.Now().Unix(),
 		Content:       string(content),
 	}
-
 	tmp, _ := json.Marshal(outputMessage)
 	e.logDebug("outputMessage will be sent to kafka: ", string(tmp))
-	_, _, err = e.producer.SendMessage(&sarama.ProducerMessage{
-		Topic: e.Config.Kafka.ChunkTopic,
-		Key:   sarama.ByteEncoder(msg.Key),
-		Value: newJSONEncoder(outputMessage),
-	})
-	if err != nil {
-		err = errors.Wrapf(err, "SendMessage: %q %s %s", e.Config.Kafka.ChunkTopic, messageTypeEngineOutput, err)
-		finalUpdateMessage.Status = chunkStatusError
-		finalUpdateMessage.ErrorMsg = err.Error()
-		return err
-	}
+	finalUpdateMessage.TimestampUTC = time.Now().Unix()
+	finalUpdateMessage.EngineOutput = &outputMessage
 	return nil
 }
 
