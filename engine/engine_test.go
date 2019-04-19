@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -161,6 +163,7 @@ func TestReadinessContextCancelled(t *testing.T) {
 	defer cancel()
 	err := engine.ready(ctx)
 	is.Equal(err, context.DeadlineExceeded)
+
 }
 
 func TestSubprocess(t *testing.T) {
@@ -302,38 +305,33 @@ func TestIgnoredChunks(t *testing.T) {
 	is.Equal(inputPipe.Offset, int64(1)) // Offset
 }
 
-type engineOutput struct {
-	// SourceEngineID   string         `json:"sourceEngineId,omitempty"`
-	// SourceEngineName string         `json:"sourceEngineName,omitempty"`
-	// TaskPayload      payload        `json:"taskPayload,omitempty"`
-	// TaskID           string         `json:"taskId"`
-	// EntityID         string         `json:"entityId,omitempty"`
-	// LibraryID        string         `json:"libraryId"`
-	Series []seriesObject `json:"series"`
-}
+func TestSubprocessCrash(t *testing.T) {
+	is := is.New(t)
 
-type seriesObject struct {
-	Start     int    `json:"startTimeMs"`
-	End       int    `json:"stopTimeMs"`
-	EntityID  string `json:"entityId"`
-	LibraryID string `json:"libraryId"`
-	Object    object `json:"object"`
-}
+	engine := NewEngine()
+	engine.Config.Subprocess.Arguments = []string{"./testdata/subprocesses/crash.sh"}
+	engine.Config.Kafka.ChunkTopic = "chunk-topic"
+	engine.logDebug = func(args ...interface{}) {
+		log.Println(args...)
+	}
+	readySrv := newOKServer()
+	defer readySrv.Close()
+	engine.Config.Webhooks.Ready.URL = readySrv.URL
+	inputPipe := newPipe()
+	defer inputPipe.Close()
+	outputPipe := newPipe()
+	defer outputPipe.Close()
+	engine.consumer = inputPipe
+	engine.producer = outputPipe
 
-type object struct {
-	Label        string   `json:"label"`
-	Text         string   `json:"text"`
-	ObjectType   string   `json:"type"`
-	URI          string   `json:"uri"`
-	EntityID     string   `json:"entityId,omitempty"`
-	LibraryID    string   `json:"libraryId,omitempty"`
-	Confidence   float64  `json:"confidence"`
-	BoundingPoly []coords `json:"boundingPoly"`
-}
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-type coords struct {
-	X float64 `json:"x"`
-	Y float64 `json:"y"`
+	err := engine.Run(ctx)
+	is.True(err != nil)
+	is.True(strings.Contains(err.Error(), "exit status 123"))
+
 }
 
 type engineOutputMessage struct {

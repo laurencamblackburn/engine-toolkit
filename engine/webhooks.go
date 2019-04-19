@@ -53,7 +53,7 @@ func newRequestFromMediaChunk(client *http.Client, processURL string, msg mediaC
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "veritone-engine-toolkit/1.0")
+	req.Header.Set("User-Agent", "veritone-engine-toolkit")
 	req.Header.Set("Content-Type", w.FormDataContentType())
 	return req, nil
 }

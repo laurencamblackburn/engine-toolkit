@@ -32,7 +32,7 @@ func handleProcess(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "exif: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	endOffsetMS, err := strconv.Atoi(r.FormValue("endOffsetMS"))
+	stopTimeMs, err := strconv.Atoi(r.FormValue("stopTimeMs"))
 	if err != nil {
 		http.Error(w, "exif: "+err.Error(), http.StatusBadRequest)
 		return
@@ -46,7 +46,7 @@ func handleProcess(w http.ResponseWriter, r *http.Request) {
 	var resp response
 	resp.Series = []item{{
 		StartTimeMs: startOffsetMS,
-		EndTimeMs:   endOffsetMS,
+		StopTimeMs:  stopTimeMs,
 	}}
 	x, err := exif.Decode(f)
 	if err != nil {
@@ -64,7 +64,7 @@ type response struct {
 
 type item struct {
 	StartTimeMs int `json:"startTimeMs"`
-	EndTimeMs   int `json:"endTimeMs"`
+	StopTimeMs  int `json:"stopTimeMs"`
 	Vendor      struct {
 		Exif      *exif.Exif `json:"exif,omitempty"`
 		ExifError string     `json:"exifError,omitempty"`

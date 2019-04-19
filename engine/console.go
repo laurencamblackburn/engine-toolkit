@@ -367,7 +367,17 @@ const consoleHTML = `<html>
 						<div class='field'>
 							<label class='label'><code>payload</code></label>
 							<div class='control'>
-								<textarea class='textarea' placeholder='Paste JSON payload here'></textarea>
+								<textarea name='payload' class='textarea' placeholder='Paste JSON payload here'>{
+	"applicationId": "applicationId",
+	"recordingId": "recordingId",
+	"jobId": "jobId",
+	"taskId": "taskId",
+	"token": "token",
+	"mode": "mode",
+	"libraryId": "libraryId",
+	"libraryEngineModelId": "libraryEngineModelId",
+	"veritoneApiBaseUrl": "https://api.veritone.com"
+}</textarea>
 							</div>
 						</div>
 					</div>
@@ -420,7 +430,7 @@ const consoleHTML = `<html>
 			<div class='column'>
 				<p>
 					<strong>This is a BETA release</strong> of the Engine Toolkit SDK.
-					While there are engines currently running in production build using this toolkit,
+					While there are engines currently running in production built using this toolkit,
 					some features might be changed in backward-incompatible ways and are not subject to any SLA or deprecation policy.
 				</p>
 			</div>
