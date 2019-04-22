@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	cluster "github.com/bsm/sarama-cluster"
+	"github.com/bsm/sarama-cluster"
 	"github.com/pkg/errors"
 )
 
@@ -117,6 +117,7 @@ type chunkStatus string
 
 const (
 	messageTypeChunkProcessedStatus messageType = "chunk_processed_status"
+	messageTypeChunkResult          messageType = "chunk_result"
 	messageTypeMediaChunk           messageType = "media_chunk"
 	messageTypeEngineOutput         messageType = "engine_output"
 )
@@ -139,6 +140,17 @@ type chunkProcessedStatus struct {
 	Status       chunkStatus `json:"status,omitempty"`       // Processed status
 	ErrorMsg     string      `json:"errorMsg,omitempty"`     // Optional error message in case of ERROR status
 	InfoMsg      string      `json:"infoMsg,omitempty"`      // Optional message for anything engine wishes to report
+}
+
+type chunkResult struct {
+	Type         messageType        `json:"type,omitempty"`         // always messageTypeChunkResult
+	TimestampUTC int64              `json:"timestampUTC,omitempty"` // milliseconds since epoch
+	TaskID       string             `json:"taskId,omitempty"`       // Task ID the chunk belongs to
+	ChunkUUID    string             `json:"chunkUUID,omitempty"`    // UUID of chunk for which status is being reported
+	Status       chunkStatus        `json:"status,omitempty"`       // Processed status
+	ErrorMsg     string             `json:"errorMsg,omitempty"`     // Optional error message in case of ERROR status
+	InfoMsg      string             `json:"infoMsg,omitempty"`      // Optional message for anything engine wishes to report
+	EngineOutput *mediaChunkMessage `json:"engineOutput,omitempty"` // Engine output when chunk processed successfully, nil otherwise
 }
 
 type payload struct {
