@@ -155,10 +155,10 @@ func (e *Engine) runInference(ctx context.Context) error {
 				if !ok {
 					return
 				}
-				e.consumer.MarkOffset(msg, "")
 				if err := e.processMessage(ctx, msg); err != nil {
 					e.logDebug(fmt.Sprintf("processing error: %v", err))
 				}
+				e.consumer.MarkOffset(msg, "")
 			case <-time.After(e.Config.EndIfIdleDuration):
 				e.logDebug(fmt.Sprintf("idle for %s", e.Config.EndIfIdleDuration))
 				return
@@ -208,14 +208,14 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 	if err := json.Unmarshal(msg.Value, &mediaChunk); err != nil {
 		return errors.Wrap(err, "unmarshal message value JSON")
 	}
-	finalUpdateMessage := chunkProcessedStatus{
-		Type:      messageTypeChunkProcessedStatus,
+	finalUpdateMessage := chunkResult{
+		Type:      messageTypeChunkResult,
 		TaskID:    mediaChunk.TaskID,
 		ChunkUUID: mediaChunk.ChunkUUID,
 		Status:    chunkStatusSuccess, // optimistic
 	}
 	defer func() {
-		// send the final message
+		// send the final (ChunkResult) message
 		finalUpdateMessage.TimestampUTC = time.Now().Unix()
 		_, _, err := e.producer.SendMessage(&sarama.ProducerMessage{
 			Topic: e.Config.Kafka.ChunkTopic,
@@ -292,20 +292,10 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		TimestampUTC:  time.Now().Unix(),
 		Content:       string(content),
 	}
-
 	tmp, _ := json.Marshal(outputMessage)
 	e.logDebug("outputMessage will be sent to kafka: ", string(tmp))
-	_, _, err = e.producer.SendMessage(&sarama.ProducerMessage{
-		Topic: e.Config.Kafka.ChunkTopic,
-		Key:   sarama.ByteEncoder(msg.Key),
-		Value: newJSONEncoder(outputMessage),
-	})
-	if err != nil {
-		err = errors.Wrapf(err, "SendMessage: %q %s %s", e.Config.Kafka.ChunkTopic, messageTypeEngineOutput, err)
-		finalUpdateMessage.Status = chunkStatusError
-		finalUpdateMessage.ErrorMsg = err.Error()
-		return err
-	}
+	finalUpdateMessage.TimestampUTC = time.Now().Unix()
+	finalUpdateMessage.EngineOutput = &outputMessage
 	return nil
 }
 
