@@ -208,7 +208,10 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 	if err := json.Unmarshal(msg.Value, &mediaChunk); err != nil {
 		return errors.Wrap(err, "unmarshal message value JSON")
 	}
-	inputMessage, _ := json.Marshal(mediaChunk)
+	inputMessage, er := json.Marshal(mediaChunk)
+	if er != nil {
+		return errors.Wrapf(er, "json: marshal engine with input message of taskID: %s", mediaChunk.TaskID)
+	}
 	e.logDebug("Engine process with input message: ", string(inputMessage))
 	finalUpdateMessage := chunkResult{
 		Type:      messageTypeChunkResult,

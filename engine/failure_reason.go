@@ -4,12 +4,12 @@ package main
 type TaskFailureReason string
 
 // WARNING: MUST keep in sync with TaskFailureReason enum defined in GraphQL
-//   https://github.com/veritone/core-graphql-server/blob/master/schema/schema.graphql//L4485
-//   Any value defined here but not in GraphQL will cause any GraphQL call using that value to fail
+// https://github.com/veritone/core-graphql-server/blob/master/schema/schema.graphql//L4485
+// Any value defined here but not in GraphQL will cause any GraphQL call using that value to fail
 // NOTE: "unknown" vs "other".  Use the former is when failure cause cannot be identified.  Use the
-//   latter when failure cause is known but there is no failure reason code for it (yet), in which
-//   case supply as much detail as possible in FailureMessage (free text) which we'll use to evaluate
-//   adding new failure reason codes in future.
+// latter when failure cause is known but there is no failure reason code for it (yet), in which
+// case supply as much detail as possible in FailureMessage (free text) which we'll use to evaluate
+// adding new failure reason codes in future.
 const (
 	// The engine encountered an unexpected internal error.
 	FailureReasonInternalError TaskFailureReason = "internal_error"
