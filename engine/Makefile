@@ -9,8 +9,8 @@ buildrelease:
 	rm -rf dist
 	mkdir dist
 	GO111MODULE=on GOOS=linux GOARCH=amd64 go build -ldflags "${ldflags}" -o release/bin/engine
-	cp -a release dist/engine-toolkit-sdk-v0.1.10
-	cd dist && tar cvvzf engine-toolkit-sdk-v0.1.10.tar.gz engine-toolkit-sdk-v0.1.10
+	cp -a release dist/engine-toolkit-sdk-v0.1.11
+	cd dist && tar cvvzf engine-toolkit-sdk-v0.1.11.tar.gz engine-toolkit-sdk-v0.1.11
 
 clean:
 	rm -rf dist
