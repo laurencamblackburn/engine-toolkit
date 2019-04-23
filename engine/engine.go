@@ -38,6 +38,39 @@ type Engine struct {
 	processingDurationSecs int64
 	chunkInPrefix string
 }
+type engineOutput struct {
+	// SourceEngineID   string         `json:"sourceEngineId,omitempty"`
+	// SourceEngineName string         `json:"sourceEngineName,omitempty"`
+	// TaskPayload      payload        `json:"taskPayload,omitempty"`
+	// TaskID           string         `json:"taskId"`
+	// EntityID         string         `json:"entityId,omitempty"`
+	// LibraryID        string         `json:"libraryId"`
+	Series []seriesObject `json:"series"`
+}
+
+type seriesObject struct {
+	Start     int    `json:"startTimeMs"`
+	End       int    `json:"stopTimeMs"`
+	EntityID  string `json:"entityId"`
+	LibraryID string `json:"libraryId"`
+	Object    object `json:"object"`
+}
+
+type object struct {
+	Label        string   `json:"label"`
+	Text         string   `json:"text"`
+	ObjectType   string   `json:"type"`
+	URI          string   `json:"uri"`
+	EntityID     string   `json:"entityId,omitempty"`
+	LibraryID    string   `json:"libraryId,omitempty"`
+	Confidence   float64  `json:"confidence"`
+	BoundingPoly []coords `json:"boundingPoly"`
+}
+
+type coords struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+}
 
 // NewEngine makes a new Engine with the specified Consumer and Producer.
 func NewEngine() *Engine {
@@ -133,11 +166,11 @@ func (e *Engine) runInference(ctx context.Context) error {
 				if !ok {
 					return
 				}
-				e.consumer.MarkOffset(msg, "")
-				resetCurrentTask(e)
 				if err := e.processMessage(ctx, msg); err != nil {
 					e.logDebug(fmt.Sprintf("processing error: %v", err))
 				}
+				e.consumer.MarkOffset(msg, "")
+				resetCurrentTask(e)
 			case <-time.After(e.Config.EndIfIdleDuration):
 				e.logDebug(fmt.Sprintf("idle for %s", e.Config.EndIfIdleDuration))
 
@@ -208,6 +241,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 	if err := json.Unmarshal(msg.Value, &mediaChunk); err != nil {
 		return errors.Wrap(err, "unmarshal message value JSON")
 	}
+
 	// Update current job and task
 	updateCurrentTask(e, mediaChunk)
 	//send edge event message when consumed a Kafka message from its engine topic
@@ -233,12 +267,19 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 
 	finalUpdateMessage := chunkProcessedStatus{
 		Type:      messageTypeChunkProcessedStatus,
+	inputMessage, er := json.Marshal(mediaChunk)
+	if er != nil {
+		return errors.Wrapf(er, "json: marshal engine with input message of taskID: %s", mediaChunk.TaskID)
+	}
+	e.logDebug("Engine process with input message: ", string(inputMessage))
+	finalUpdateMessage := chunkResult{
+		Type:      messageTypeChunkResult,
 		TaskID:    mediaChunk.TaskID,
 		ChunkUUID: mediaChunk.ChunkUUID,
 		Status:    chunkStatusSuccess, // optimistic
 	}
 	defer func() {
-		// send the final message
+		// send the final (ChunkResult) message
 		finalUpdateMessage.TimestampUTC = time.Now().Unix()
 		_, _, err := e.producer.SendMessage(&sarama.ProducerMessage{
 			Topic: e.Config.Kafka.ChunkTopic,
@@ -246,7 +287,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 			Value: newJSONEncoder(finalUpdateMessage),
 		})
 		if err != nil {
-			e.logDebug("WARN", "failed to send final chunk update:", err)
+			e.logDebug(fmt.Sprintf("WARN: failed to send final chunk update of taskID: %s with error: %s", mediaChunk.TaskID, err.Error()))
 		}
 		// Update Processing Duration Secs
 		updateProcessingDurationSecs(e)
@@ -279,6 +320,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		e.Config.Webhooks.Backoff.MaxRetries,
 	)
 	var content []byte
+	var engineOutputContent engineOutput
 	err := retry.Do(func() error {
 		req, err := newRequestFromMediaChunk(e.client, e.Config.Webhooks.Process.URL, mediaChunk)
 		if err != nil {
@@ -301,21 +343,32 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		if resp.StatusCode != http.StatusOK {
 			return errors.Errorf("%d: %s", resp.StatusCode, buf.String())
 		}
-		if buf.Len() > 0 {
-			content = buf.Bytes()
+		if buf.Len() == 0 {
+			ignoreChunk = true
+			return nil
+		}
+		if err := json.NewDecoder(&buf).Decode(&engineOutputContent); err != nil {
+			return errors.Wrap(err, "decode response")
 		}
 		return nil
 	})
 	if err != nil {
 		// send error message
+		errMessage := fmt.Sprintf("Unable to process taskID %s: %v", mediaChunk.TaskID, err.Error())
 		err = errors.Wrapf(err, "SendMessage: %q %s %s", e.Config.Kafka.ChunkTopic, messageTypeChunkProcessedStatus, chunkStatusSuccess)
 		finalUpdateMessage.Status = chunkStatusError
 		finalUpdateMessage.ErrorMsg = err.Error()
+		finalUpdateMessage.FailureReason = FailureReasonInternalError
+		finalUpdateMessage.FailureMsg = errMessage
 		return err
 	}
 	if ignoreChunk {
 		finalUpdateMessage.Status = chunkStatusIgnored
 		return nil
+	}
+	content, err = json.Marshal(engineOutputContent)
+	if err != nil {
+		return errors.Wrapf(err, "json: marshal engine output content of taskID: %s", mediaChunk.TaskID)
 	}
 	// send output message
 	outputMessage := mediaChunkMessage{
@@ -325,19 +378,12 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		ChunkUUID:     mediaChunk.ChunkUUID,
 		StartOffsetMS: mediaChunk.StartOffsetMS,
 		EndOffsetMS:   mediaChunk.EndOffsetMS,
+		TimestampUTC:  time.Now().Unix(),
 		Content:       string(content),
 	}
-	_, _, err = e.producer.SendMessage(&sarama.ProducerMessage{
-		Topic: e.Config.Kafka.ChunkTopic,
-		Key:   sarama.ByteEncoder(msg.Key),
-		Value: newJSONEncoder(outputMessage),
-	})
-	if err != nil {
-		err = errors.Wrapf(err, "SendMessage: %q %s %s", e.Config.Kafka.ChunkTopic, messageTypeEngineOutput, err)
-		finalUpdateMessage.Status = chunkStatusError
-		finalUpdateMessage.ErrorMsg = err.Error()
-		return err
-	}
+	tmp, _ := json.Marshal(outputMessage)
+	e.logDebug("outputMessage will be sent to kafka: ", string(tmp))
+	finalUpdateMessage.EngineOutput = &outputMessage
 	return nil
 }
 

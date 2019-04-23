@@ -6,7 +6,7 @@ run: down buildengine builddocker up
 runtestmode: down buildengine builddocker uptestmode
 
 buildengine:
-	GOOS=linux GOARCH=amd64 go build -ldflags "${ldflags}" -o ./dist/engine ../../
+	GO111MODULE=on GOOS=linux GOARCH=amd64 go build -ldflags "${ldflags}" -o ./dist/engine ../../
 	GOOS=linux GOARCH=amd64 go build -o ./dist/exif-extraction-engine
 
 builddocker:

@@ -74,7 +74,7 @@ func TestProcessingChunk(t *testing.T) {
 	}
 	var outputMsg *sarama.ConsumerMessage
 	var chunkProcessedStatus chunkProcessedStatus
-
+	var chunkResult chunkResult
 	_, _, err := inputPipe.SendMessage(&sarama.ProducerMessage{
 		Offset: 1,
 		Key:    sarama.StringEncoder(inputMessage.TaskID),
@@ -118,20 +118,25 @@ func TestProcessingChunk(t *testing.T) {
 	}
 	is.Equal(string(outputMsg.Key), inputMessage.TaskID)      // output message key must be TaskID
 	is.Equal(outputMsg.Topic, engine.Config.Kafka.ChunkTopic) // chunk topic
-	err = json.Unmarshal(outputMsg.Value, &chunkProcessedStatus)
+	err = json.Unmarshal(outputMsg.Value, &chunkResult)
 	is.NoErr(err)
-	is.Equal(chunkProcessedStatus.ErrorMsg, "")
-	is.Equal(chunkProcessedStatus.Type, messageTypeChunkProcessedStatus)
-	is.Equal(chunkProcessedStatus.TaskID, inputMessage.TaskID)
-	is.Equal(chunkProcessedStatus.ChunkUUID, inputMessage.ChunkUUID)
-	is.Equal(chunkProcessedStatus.Status, chunkStatusSuccess)
+	is.Equal(chunkResult.ErrorMsg, "")
+	is.Equal(chunkResult.Type, messageTypeChunkResult)
+	is.Equal(chunkResult.TaskID, inputMessage.TaskID)
+	is.Equal(chunkResult.ChunkUUID, inputMessage.ChunkUUID)
+	is.Equal(chunkResult.Status, chunkStatusSuccess)
+
+	is.Equal(chunkResult.EngineOutput.Type, messageTypeEngineOutput)
+	is.Equal(chunkResult.EngineOutput.TaskID, inputMessage.TaskID)
+	is.Equal(chunkResult.EngineOutput.ChunkUUID, inputMessage.ChunkUUID)
+	is.Equal(chunkResult.EngineOutput.StartOffsetMS, 1000)
+	is.Equal(chunkResult.EngineOutput.EndOffsetMS, 2000)
 
 	var output engineOutput
-	err = json.Unmarshal([]byte(engineOutputMessage.Content), &output)
+	err = json.Unmarshal([]byte(chunkResult.EngineOutput.Content), &output)
 	is.NoErr(err)
 	is.Equal(len(output.Series), 1)
 	is.Equal(output.Series[0].Object.Label, "something")
-
 	is.Equal(inputPipe.Offset, int64(1)) // Offset
 }
 
@@ -188,6 +193,7 @@ func TestReadinessContextCancelled(t *testing.T) {
 	defer cancel()
 	err := engine.ready(ctx)
 	is.Equal(err, context.DeadlineExceeded)
+
 }
 
 func TestSubprocess(t *testing.T) {
@@ -332,7 +338,7 @@ func TestIgnoredChunks(t *testing.T) {
 	err = json.Unmarshal(outputMsg.Value, &chunkProcessedStatus)
 	is.NoErr(err)
 	is.Equal(chunkProcessedStatus.ErrorMsg, "")
-	is.Equal(chunkProcessedStatus.Type, messageTypeChunkProcessedStatus)
+	is.Equal(chunkProcessedStatus.Type, messageTypeChunkResult)
 	is.Equal(chunkProcessedStatus.TaskID, inputMessage.TaskID)
 	is.Equal(chunkProcessedStatus.ChunkUUID, inputMessage.ChunkUUID)
 	is.Equal(chunkProcessedStatus.Status, chunkStatusIgnored)
@@ -367,40 +373,6 @@ func TestSubprocessCrash(t *testing.T) {
 	is.True(err != nil)
 	is.True(strings.Contains(err.Error(), "exit status 123"))
 
-}
-
-type engineOutput struct {
-	// SourceEngineID   string         `json:"sourceEngineId,omitempty"`
-	// SourceEngineName string         `json:"sourceEngineName,omitempty"`
-	// TaskPayload      payload        `json:"taskPayload,omitempty"`
-	// TaskID           string         `json:"taskId"`
-	// EntityID         string         `json:"entityId,omitempty"`
-	// LibraryID        string         `json:"libraryId"`
-	Series []seriesObject `json:"series"`
-}
-
-type seriesObject struct {
-	Start     int    `json:"startTimeMs"`
-	End       int    `json:"stopTimeMs"`
-	EntityID  string `json:"entityId"`
-	LibraryID string `json:"libraryId"`
-	Object    object `json:"object"`
-}
-
-type object struct {
-	Label        string   `json:"label"`
-	Text         string   `json:"text"`
-	ObjectType   string   `json:"type"`
-	URI          string   `json:"uri"`
-	EntityID     string   `json:"entityId,omitempty"`
-	LibraryID    string   `json:"libraryId,omitempty"`
-	Confidence   float64  `json:"confidence"`
-	BoundingPoly []coords `json:"boundingPoly"`
-}
-
-type coords struct {
-	X float64 `json:"x"`
-	Y float64 `json:"y"`
 }
 
 type engineOutputMessage struct {

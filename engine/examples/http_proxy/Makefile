@@ -1,10 +1,11 @@
+githash = $(shell git rev-parse --short HEAD)
+ldflags = -X main.BuildTag=$(githash)
 
 build: clean buildengine builddocker
-run: build up
-
+run: down build up
 
 buildengine:
-	GOOS=linux GOARCH=amd64 go build -o ./dist/engine ../../
+	GO111MODULE=on GOOS=linux GOARCH=amd64 go build -ldflags "${ldflags}" -o ./dist/engine ../../
 	GOOS=linux GOARCH=amd64 go build -o ./dist/http-proxy-example
 
 builddocker:
@@ -15,6 +16,7 @@ up:
 
 down:
 	docker rm -f http-proxy-example 2>/dev/null || true
+
 
 clean:
 	rm -rf ./dist

@@ -13,6 +13,7 @@ import (
 )
 
 // BuildTag is the githash of this build.
+// It is changed with build tags in the Makefile.
 var BuildTag = "dev"
 
 func main() {
