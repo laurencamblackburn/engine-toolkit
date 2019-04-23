@@ -208,6 +208,8 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 	if err := json.Unmarshal(msg.Value, &mediaChunk); err != nil {
 		return errors.Wrap(err, "unmarshal message value JSON")
 	}
+	inputMessage, _ := json.Marshal(mediaChunk)
+	e.logDebug("Engine process with input message: ", string(inputMessage))
 	finalUpdateMessage := chunkResult{
 		Type:      messageTypeChunkResult,
 		TaskID:    mediaChunk.TaskID,
@@ -223,7 +225,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 			Value: newJSONEncoder(finalUpdateMessage),
 		})
 		if err != nil {
-			e.logDebug("WARN", "failed to send final chunk update of taskID: %s", mediaChunk.TaskID , err)
+			e.logDebug(fmt.Sprintf("WARN: failed to send final chunk update of taskID: %s with error: %s", mediaChunk.TaskID, err.Error()))
 		}
 	}()
 
