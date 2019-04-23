@@ -223,7 +223,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 			Value: newJSONEncoder(finalUpdateMessage),
 		})
 		if err != nil {
-			e.logDebug("WARN", "failed to send final chunk update:", err)
+			e.logDebug("WARN", "failed to send final chunk update of taskID: %s", mediaChunk.TaskID , err)
 		}
 	}()
 
@@ -268,9 +268,12 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 	})
 	if err != nil {
 		// send error message
+		errMessage := fmt.Sprintf("Unable to process taskID %s: %v", mediaChunk.TaskID, err.Error())
 		err = errors.Wrapf(err, "SendMessage: %q %s %s", e.Config.Kafka.ChunkTopic, messageTypeChunkProcessedStatus, chunkStatusSuccess)
 		finalUpdateMessage.Status = chunkStatusError
 		finalUpdateMessage.ErrorMsg = err.Error()
+		finalUpdateMessage.FailureReason = FailureReasonInternalError
+		finalUpdateMessage.FailureMsg = errMessage
 		return err
 	}
 	if ignoreChunk {
@@ -279,7 +282,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 	}
 	content, err = json.Marshal(engineOutputContent)
 	if err != nil {
-		return errors.Wrap(err, "json: marshal engine output content")
+		return errors.Wrapf(err, "json: marshal engine output content of taskID: %s", mediaChunk.TaskID)
 	}
 	// send output message
 	outputMessage := mediaChunkMessage{
@@ -294,7 +297,6 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 	}
 	tmp, _ := json.Marshal(outputMessage)
 	e.logDebug("outputMessage will be sent to kafka: ", string(tmp))
-	finalUpdateMessage.TimestampUTC = time.Now().Unix()
 	finalUpdateMessage.EngineOutput = &outputMessage
 	return nil
 }

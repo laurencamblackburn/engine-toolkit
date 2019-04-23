@@ -143,14 +143,16 @@ type chunkProcessedStatus struct {
 }
 
 type chunkResult struct {
-	Type         messageType        `json:"type,omitempty"`         // always messageTypeChunkResult
-	TimestampUTC int64              `json:"timestampUTC,omitempty"` // milliseconds since epoch
-	TaskID       string             `json:"taskId,omitempty"`       // Task ID the chunk belongs to
-	ChunkUUID    string             `json:"chunkUUID,omitempty"`    // UUID of chunk for which status is being reported
-	Status       chunkStatus        `json:"status,omitempty"`       // Processed status
-	ErrorMsg     string             `json:"errorMsg,omitempty"`     // Optional error message in case of ERROR status
-	InfoMsg      string             `json:"infoMsg,omitempty"`      // Optional message for anything engine wishes to report
-	EngineOutput *mediaChunkMessage `json:"engineOutput,omitempty"` // Engine output when chunk processed successfully, nil otherwise
+	Type          messageType        `json:"type,omitempty"`          // always messageTypeChunkResult
+	TimestampUTC  int64              `json:"timestampUTC,omitempty"`  // milliseconds since epoch
+	TaskID        string             `json:"taskId,omitempty"`        // Task ID the chunk belongs to
+	ChunkUUID     string             `json:"chunkUUID,omitempty"`     // UUID of chunk for which status is being reported
+	Status        chunkStatus        `json:"status,omitempty"`        // Processed status
+	ErrorMsg      string             `json:"errorMsg,omitempty"`      // Optional error message in case of ERROR status
+	InfoMsg       string             `json:"infoMsg,omitempty"`       // Optional message for anything engine wishes to report
+	FailureReason TaskFailureReason  `json:"failureReason,omitempty"` // Failure reason code when status is ERROR
+	FailureMsg    string             `json:"failureMsg,omitempty"`    // Supplemental/context data for failure reason
+	EngineOutput  *mediaChunkMessage `json:"engineOutput,omitempty"`  // Engine output when chunk processed successfully, nil otherwise
 }
 
 type payload struct {
