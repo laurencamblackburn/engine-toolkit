@@ -9,7 +9,6 @@ import (
 	"syscall"
 
 	"github.com/pkg/errors"
-	eMessage "github.com/veritone/edge-messages"
 )
 
 // BuildTag is the githash of this build.
@@ -77,9 +76,9 @@ func run(ctx context.Context) error {
 		}
 		setBuidEngine(eng)
 		// Send edge event message when engine instance is ready to process work
-		edgeMessage := baseEdgeEventData()
-		edgeMessage.Event = eMessage.EngineInstanceReady
-		edgeMessage.EventTimeUTC = eMessage.GetCurrentTimeEpochMs()
+		edgeMessage := EmptyEdgeEventData()
+		edgeMessage.Event = EngineInstanceReady
+		edgeMessage.EventTimeUTC = getCurrentTimeEpochMs()
 		edgeMessage.Component = eng.Config.EngineID
 		edgeMessage.EngineInfo.EngineID = eng.Config.EngineID
 		edgeMessage.EngineInfo.BuildID = eng.BuildID
@@ -91,9 +90,9 @@ func run(ctx context.Context) error {
 			Value: newJSONEncoder(edgeMessage),
 		})
 		if err != nil {
-			errors.Wrapf(err, "SendMessage: %q %s", eng.Config.EngineID, eMessage.EngineInstanceReady)
+			errors.Wrapf(err, "SendMessage: %q %s", eng.Config.EngineID, EngineInstanceReady)
 		}
-		TimeEngineInstancePeriodic(eng)
+		timeEngineInstancePeriodic(eng)
 	} else {
 		eng.logDebug("skipping kafka setup")
 	}

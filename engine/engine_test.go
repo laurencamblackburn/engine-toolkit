@@ -15,7 +15,6 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/matryer/is"
-	"github.com/satori/go.uuid"
 )
 
 // TestProcessingChunk tests the entire end to end flow of processing
@@ -26,8 +25,8 @@ func TestProcessingChunk(t *testing.T) {
 	engine := NewEngine()
 	engine.Config.Subprocess.Arguments = []string{} // no subprocess
 	engine.Config.Kafka.ChunkTopic = "chunk-topic"
-	engine.Config.EngineID = uuidv4()
-	engine.BuildID = uuidv4()
+	engine.Config.EngineID = "engine-1"
+	engine.BuildID = "build-1"
 	engine.logDebug = func(args ...interface{}) {}
 	inputPipe := newPipe()
 	defer inputPipe.Close()
@@ -73,7 +72,6 @@ func TestProcessingChunk(t *testing.T) {
 		TaskID:        "task1",
 	}
 	var outputMsg *sarama.ConsumerMessage
-	var chunkProcessedStatus chunkProcessedStatus
 	var chunkResult chunkResult
 	_, _, err := inputPipe.SendMessage(&sarama.ProducerMessage{
 		Offset: 1,
@@ -101,23 +99,6 @@ func TestProcessingChunk(t *testing.T) {
 	}
 	is.Equal(string(outputMsg.Key), inputMessage.TaskID)      // output message key must be TaskID
 	is.Equal(outputMsg.Topic, engine.Config.Kafka.ChunkTopic) // chunk topic
-	var engineOutputMessage engineOutputMessage
-	err = json.Unmarshal(outputMsg.Value, &engineOutputMessage)
-	is.Equal(engineOutputMessage.Type, messageTypeEngineOutput)
-	is.Equal(engineOutputMessage.TaskID, inputMessage.TaskID)
-	is.Equal(engineOutputMessage.ChunkUUID, inputMessage.ChunkUUID)
-	is.Equal(engineOutputMessage.StartOffsetMS, 1000)
-	is.Equal(engineOutputMessage.EndOffsetMS, 2000)
-
-	// read the chunk success message
-	select {
-	case outputMsg = <-outputPipe.Messages():
-	case <-time.After(1 * time.Second):
-		is.Fail() // timed out
-		return
-	}
-	is.Equal(string(outputMsg.Key), inputMessage.TaskID)      // output message key must be TaskID
-	is.Equal(outputMsg.Topic, engine.Config.Kafka.ChunkTopic) // chunk topic
 	err = json.Unmarshal(outputMsg.Value, &chunkResult)
 	is.NoErr(err)
 	is.Equal(chunkResult.ErrorMsg, "")
@@ -131,6 +112,16 @@ func TestProcessingChunk(t *testing.T) {
 	is.Equal(chunkResult.EngineOutput.ChunkUUID, inputMessage.ChunkUUID)
 	is.Equal(chunkResult.EngineOutput.StartOffsetMS, 1000)
 	is.Equal(chunkResult.EngineOutput.EndOffsetMS, 2000)
+
+	// read the chunk success message
+	select {
+	case outputMsg = <-outputPipe.Messages():
+	case <-time.After(1 * time.Second):
+		is.Fail() // timed out
+		return
+	}
+	is.Equal(string(outputMsg.Key), inputMessage.ChunkUUID) // output message key must be TaskID
+	is.Equal(outputMsg.Topic, engine.Config.EdgeEventTopic) // edge event topic
 
 	var output engineOutput
 	err = json.Unmarshal([]byte(chunkResult.EngineOutput.Content), &output)
@@ -389,12 +380,4 @@ type engineOutputMessage struct {
 	Rev           int64       `json:"rev"`
 	TaskPayload   payload     `json:"taskPayload"`
 	ChunkUUID     string      `json:"chunkUUID"`
-}
-
-func uuidv4() string {
-	id, err := uuid.NewV4()
-	if err != nil {
-		return "12345678-90ab-cdef-1234-567809ab"
-	}
-	return id.String()
 }

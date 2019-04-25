@@ -15,7 +15,6 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/pkg/errors"
-	eMessage "github.com/veritone/edge-messages"
 )
 
 // Engine consumes messages and calls webhooks to
@@ -31,6 +30,7 @@ type Engine struct {
 	// Config holds the Engine configuration.
 	Config Config
 	BuildID string
+	CurrentChunkID string
 	CurrentJobID string
 	CurrentTaskID string
 	engineInstanceStartedDate time.Time
@@ -197,9 +197,9 @@ func (e *Engine) runInference(ctx context.Context) error {
 	defer func() {
 		e.logDebug("Send edge event message when engine instance gracefully shutdown")
 		//Send edge event message when engine instance gracefully shutdown
-		edgeMessage := baseEdgeEventData()
-		edgeMessage.Event = eMessage.EngineInstanceQuit
-		edgeMessage.EventTimeUTC = eMessage.GetCurrentTimeEpochMs()
+		edgeMessage := EmptyEdgeEventData()
+		edgeMessage.Event = EngineInstanceQuit
+		edgeMessage.EventTimeUTC = getCurrentTimeEpochMs()
 		edgeMessage.Component = e.Config.EngineID
 		edgeMessage.EngineInfo.EngineID = e.Config.EngineID
 		edgeMessage.EngineInfo.BuildID = e.BuildID
@@ -211,7 +211,7 @@ func (e *Engine) runInference(ctx context.Context) error {
 			Value: newJSONEncoder(edgeMessage),
 		})
 		if err != nil {
-			errors.Wrapf(err, "SendMessage: %q %s", e.Config.EngineID, eMessage.EngineInstanceQuit)
+			errors.Wrapf(err, "SendMessage: %q %s", e.Config.EngineID, EngineInstanceQuit)
 		}
 	}()
 	return nil
@@ -241,37 +241,34 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 	if err := json.Unmarshal(msg.Value, &mediaChunk); err != nil {
 		return errors.Wrap(err, "unmarshal message value JSON")
 	}
-
-	// Update current job and task
-	updateCurrentTask(e, mediaChunk)
-	//send edge event message when consumed a Kafka message from its engine topic
-	edgeMessage := baseEdgeEventData()
-	edgeMessage.Event = eMessage.MediaChunkConsumed
-	edgeMessage.EventTimeUTC = eMessage.GetCurrentTimeEpochMs()
-	edgeMessage.Component = e.Config.EngineID
-	edgeMessage.JobID = mediaChunk.JobID
-	edgeMessage.TaskID = mediaChunk.TaskID
-	edgeMessage.ChunkID = mediaChunk.ChunkUUID
-	edgeMessage.EngineInfo.EngineID = e.Config.EngineID
-	edgeMessage.EngineInfo.BuildID = e.BuildID
-	edgeMessage.EngineInfo.InstanceID =  e.Config.EngineInstanceID
-
-	_, _, er := e.producer.SendMessage(&sarama.ProducerMessage{
-		Topic: e.Config.EdgeEventTopic,
-		Key:   sarama.ByteEncoder(mediaChunk.ChunkUUID),
-		Value: newJSONEncoder(edgeMessage),
-	})
-	if er != nil {
-		errors.Wrapf(er, "SendMessage: %q %s", mediaChunk.ChunkUUID, eMessage.MediaChunkConsumed)
-	}
-
-	finalUpdateMessage := chunkProcessedStatus{
-		Type:      messageTypeChunkProcessedStatus,
 	inputMessage, er := json.Marshal(mediaChunk)
 	if er != nil {
 		return errors.Wrapf(er, "json: marshal engine with input message of taskID: %s", mediaChunk.TaskID)
 	}
 	e.logDebug("Engine process with input message: ", string(inputMessage))
+
+	// Update current job and task
+	updateCurrentTask(e, mediaChunk)
+	//send edge event message when consumed a Kafka message from its engine topic
+	edgeMessage := EmptyEdgeEventData()
+	edgeMessage.Event = MediaChunkConsumed
+	edgeMessage.EventTimeUTC = getCurrentTimeEpochMs()
+	edgeMessage.Component = e.Config.EngineID
+	edgeMessage.JobID = e.CurrentJobID
+	edgeMessage.TaskID = e.CurrentTaskID
+	edgeMessage.ChunkID = e.CurrentChunkID
+	edgeMessage.EngineInfo.EngineID = e.Config.EngineID
+	edgeMessage.EngineInfo.BuildID = e.BuildID
+	edgeMessage.EngineInfo.InstanceID =  e.Config.EngineInstanceID
+
+	_, _, errSend := e.producer.SendMessage(&sarama.ProducerMessage{
+		Topic: e.Config.EdgeEventTopic,
+		Key:   sarama.ByteEncoder(mediaChunk.ChunkUUID),
+		Value: newJSONEncoder(edgeMessage),
+	})
+	if errSend != nil {
+		errors.Wrapf(errSend, "SendMessage: %q %s", mediaChunk.ChunkUUID, MediaChunkConsumed)
+	}
 	finalUpdateMessage := chunkResult{
 		Type:      messageTypeChunkResult,
 		TaskID:    mediaChunk.TaskID,
@@ -289,16 +286,16 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		if err != nil {
 			e.logDebug(fmt.Sprintf("WARN: failed to send final chunk update of taskID: %s with error: %s", mediaChunk.TaskID, err.Error()))
 		}
-		// Update Processing Duration Secs
+		// update Processing Duration Secs
 		updateProcessingDurationSecs(e)
-		//send edge event message when producing a Kafka message to chunk_all topic
-		edgeMessage := baseEdgeEventData()
-		edgeMessage.Event = eMessage.ChunkResultProduced
-		edgeMessage.EventTimeUTC = eMessage.GetCurrentTimeEpochMs()
+		// send edge event message when producing a Kafka message to chunk_all topic
+		edgeMessage := EmptyEdgeEventData()
+		edgeMessage.Event = ChunkResultProduced
+		edgeMessage.EventTimeUTC = getCurrentTimeEpochMs()
 		edgeMessage.Component = e.Config.EngineID
-		edgeMessage.JobID = mediaChunk.JobID
-		edgeMessage.TaskID = mediaChunk.TaskID
-		edgeMessage.ChunkID = mediaChunk.ChunkUUID
+		edgeMessage.JobID = e.CurrentJobID
+		edgeMessage.TaskID = e.CurrentTaskID
+		edgeMessage.ChunkID = e.CurrentChunkID
 		edgeMessage.EngineInfo.EngineID = e.Config.EngineID
 		edgeMessage.EngineInfo.BuildID = e.BuildID
 		edgeMessage.EngineInfo.InstanceID =  e.Config.EngineInstanceID
@@ -309,7 +306,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 			Value: newJSONEncoder(edgeMessage),
 		})
 		if er != nil {
-			errors.Wrapf(err, "SendMessage: %q %s", mediaChunk.ChunkUUID, eMessage.ChunkResultProduced)
+			errors.Wrapf(err, "SendMessage: %q %s", mediaChunk.ChunkUUID, ChunkResultProduced)
 		}
 	}()
 
@@ -456,25 +453,17 @@ func setBuidEngine(e * Engine)  {
 func resetCurrentTask(e * Engine) {
 	e.CurrentJobID = ""
 	e.CurrentTaskID = ""
+	e.CurrentChunkID = ""
 }
 func updateCurrentTask(e * Engine, job mediaChunkMessage) {
 	e.CurrentJobID = job.JobID
 	e.CurrentTaskID = job.TaskID
+	e.CurrentChunkID = job.ChunkUUID
 }
 func updateProcessingDurationSecs(e * Engine) {
 	e.processingDurationSecs += int64(time.Now().Sub(e.lastReceivedDate).Seconds())
 }
-func baseEdgeEventData() eMessage.EdgeEventData {
-
-	return eMessage.EdgeEventData{
-		Type:         eMessage.EdgeEventDataType,
-		TimestampUTC: eMessage.GetCurrentTimeEpochMs(),
-		EngineInfo: &eMessage.EngineInfo{
-
-		},
-	}
-}
-func TimeEngineInstancePeriodic(e *Engine) {
+func timeEngineInstancePeriodic(e *Engine) {
 	// Convert tp duration
 	timeIntervalInDuration, _ := time.ParseDuration(e.Config.TimeToSendPeriodicMessageInDuration)
 
@@ -482,9 +471,9 @@ func TimeEngineInstancePeriodic(e *Engine) {
 	go func() {
 		for range timeTicker.C {
 			// Send edge event message  total time (rounded to nearest second) engine instance has been and total time processing
-			edgeMessage := baseEdgeEventData()
-			edgeMessage.Event = eMessage.EngineInstancePeriodic
-			edgeMessage.EventTimeUTC = eMessage.GetCurrentTimeEpochMs()
+			edgeMessage := EmptyEdgeEventData()
+			edgeMessage.Event = EngineInstancePeriodic
+			edgeMessage.EventTimeUTC = getCurrentTimeEpochMs()
 			edgeMessage.Component = e.Config.EngineID
 			edgeMessage.JobID = e.CurrentJobID
 			edgeMessage.TaskID = e.CurrentTaskID
@@ -500,7 +489,7 @@ func TimeEngineInstancePeriodic(e *Engine) {
 				Value: newJSONEncoder(edgeMessage),
 			})
 			if err != nil {
-				errors.Wrapf(err, "SendMessage: %q %s", e.Config.EngineID, eMessage.EngineInstancePeriodic)
+				errors.Wrapf(err, "SendMessage: %q %s", e.Config.EngineID, EngineInstancePeriodic)
 			}
 		}
 	}()
