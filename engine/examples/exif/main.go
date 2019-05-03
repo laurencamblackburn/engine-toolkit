@@ -32,7 +32,7 @@ func handleProcess(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "exif: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	stopTimeMs, err := strconv.Atoi(r.FormValue("stopTimeMs"))
+	stopTimeMs, err := strconv.Atoi(r.FormValue("endOffsetMS"))
 	if err != nil {
 		http.Error(w, "exif: "+err.Error(), http.StatusBadRequest)
 		return

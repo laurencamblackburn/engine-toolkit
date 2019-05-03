@@ -37,7 +37,7 @@ func TestProcess(t *testing.T) {
 	srv := newServer()
 	srv.ServeHTTP(w, r)
 	if w.Code != http.StatusOK {
-		t.Fatalf("got status: %d", w.Code)
+		t.Fatalf("got status: %d: %s", w.Code, w.Body.String())
 	}
 	var obj interface{}
 	if err := json.NewDecoder(w.Body).Decode(&obj); err != nil {
