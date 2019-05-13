@@ -77,7 +77,7 @@ func TestNewRequestFromMediaChunk(t *testing.T) {
 		is.Equal(string(b), "this simulates data")
 	}))
 	defer processSrv.Close()
-	req, err := newRequestFromMediaChunk(client, processSrv.URL, msg)
+	req, err, _ := newRequestFromMediaChunk(client, processSrv.URL, msg)
 	is.NoErr(err)
 	resp, err := client.Do(req)
 	is.NoErr(err)

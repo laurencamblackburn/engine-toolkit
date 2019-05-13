@@ -160,7 +160,7 @@ func (e *Engine) processMessage(ctx context.Context, msg *sarama.ConsumerMessage
 	}
 	switch typeCheck.Type {
 	case messageTypeMediaChunk:
-		if err := e.processMessageMediaChunk(ctx, msg); err != nil {
+		if err, _ := e.processMessageMediaChunk(ctx, msg); err != nil {
 			return errors.Wrap(err, "process media chunk")
 		}
 	default:
@@ -170,14 +170,14 @@ func (e *Engine) processMessage(ctx context.Context, msg *sarama.ConsumerMessage
 }
 
 // processMessageMediaChunk processes a single media chunk as described by the sarama.ConsumerMessage.
-func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.ConsumerMessage) error {
+func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.ConsumerMessage) (error,  TaskFailureReason){
 	var mediaChunk mediaChunkMessage
 	if err := json.Unmarshal(msg.Value, &mediaChunk); err != nil {
-		return errors.Wrap(err, "unmarshal message value JSON")
+		return errors.Wrap(err, "unmarshal message value JSON"), FailureReasonInvalidData
 	}
 	inputMessage, er := json.Marshal(mediaChunk)
 	if er != nil {
-		return errors.Wrapf(er, "json: marshal engine with input message of taskID: %s", mediaChunk.TaskID)
+		return errors.Wrapf(er, "json: marshal engine with input message of taskID: %s", mediaChunk.TaskID), FailureReasonInvalidData
 	}
 	e.logDebug("Engine process with input message: ", string(inputMessage))
 	finalUpdateMessage := chunkResult{
@@ -205,34 +205,34 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		e.Config.Webhooks.Backoff.MaxRetries,
 	)
 	var content string
-	err := retry.Do(func() error {
-		req, err := newRequestFromMediaChunk(e.client, e.Config.Webhooks.Process.URL, mediaChunk)
+	err, failureReason := retry.Do(func() (error, TaskFailureReason) {
+		req, err, failReason := newRequestFromMediaChunk(e.client, e.Config.Webhooks.Process.URL, mediaChunk)
 		if err != nil {
-			return errors.Wrap(err, "new request")
+			return errors.Wrap(err, "new request"), failReason
 		}
 		req = req.WithContext(ctx)
 		resp, err := e.client.Do(req)
 		if err != nil {
-			return err
+			return err, FailureReasonAPIError
 		}
 		defer resp.Body.Close()
 		var buf bytes.Buffer
 		if _, err := io.Copy(&buf, resp.Body); err != nil {
-			return errors.Wrap(err, "read body")
+			return errors.Wrap(err, "read body"), FailureReasonAPIError
 		}
 		if resp.StatusCode == http.StatusNoContent {
 			ignoreChunk = true
-			return nil
+			return nil, ""
 		}
 		if resp.StatusCode != http.StatusOK {
-			return errors.Errorf("%d: %s", resp.StatusCode, buf.String())
+			return errors.Errorf("%d: %s", resp.StatusCode, buf.String()), FailureReasonURLNotAllowed
 		}
 		if buf.Len() == 0 {
 			ignoreChunk = true
-			return nil
+			return nil, ""
 		}
 		content = buf.String()
-		return nil
+		return nil, ""
 	})
 	if err != nil {
 		// send error message
@@ -240,13 +240,13 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		err = errors.Wrapf(err, "SendMessage: %q %s %s", e.Config.Kafka.ChunkTopic, messageTypeChunkProcessedStatus, chunkStatusSuccess)
 		finalUpdateMessage.Status = chunkStatusError
 		finalUpdateMessage.ErrorMsg = err.Error()
-		finalUpdateMessage.FailureReason = FailureReasonInternalError
+		finalUpdateMessage.FailureReason = failureReason
 		finalUpdateMessage.FailureMsg = errMessage
-		return err
+		return err, failureReason
 	}
 	if ignoreChunk {
 		finalUpdateMessage.Status = chunkStatusIgnored
-		return nil
+		return nil, ""
 	}
 	// send output message
 	outputMessage := mediaChunkMessage{
@@ -262,7 +262,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 	tmp, _ := json.Marshal(outputMessage)
 	e.logDebug("outputMessage will be sent to kafka: ", string(tmp))
 	finalUpdateMessage.EngineOutput = &outputMessage
-	return nil
+	return nil, ""
 }
 
 // ready returns a channel that is closed when the engine is

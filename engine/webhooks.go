@@ -10,10 +10,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-func newRequestFromMediaChunk(client *http.Client, processURL string, msg mediaChunkMessage) (*http.Request, error) {
+func newRequestFromMediaChunk(client *http.Client, processURL string, msg mediaChunkMessage) (*http.Request, error, TaskFailureReason) {
 	payload, err := msg.unmarshalPayload()
 	if err != nil {
-		return nil, errors.Wrap(err, "unmarshal payload")
+		return nil, errors.Wrap(err, "unmarshal payload"), FailureReasonInvalidData
 	}
 	var buf bytes.Buffer
 	w := multipart.NewWriter(&buf)
@@ -32,28 +32,28 @@ func newRequestFromMediaChunk(client *http.Client, processURL string, msg mediaC
 	if msg.CacheURI != "" {
 		f, err := w.CreateFormFile("chunk", "chunk.data")
 		if err != nil {
-			return nil, err
+			return nil, err, FailureReasonFileWriteError
 		}
 		resp, err := client.Get(msg.CacheURI)
 		if err != nil {
-			return nil, errors.Wrap(err, "download chunk file from source")
+			return nil, errors.Wrap(err, "download chunk file from source"), FailureReasonURLNotFound
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
-			return nil, errors.Wrapf(err, "download chunk file from source: status code %v", resp.Status)
+			return nil, errors.Wrapf(err, "download chunk file from source: status code %v", resp.Status), FailureReasonURLNotAllowed
 		}
 		if _, err := io.Copy(f, resp.Body); err != nil {
-			return nil, errors.Wrap(err, "read chunk file from source")
+			return nil, errors.Wrap(err, "read chunk file from source"), FailureReasonURLNotAllowed
 		}
 	}
 	if err := w.Close(); err != nil {
-		return nil, err
+		return nil, err, FailureReasonSystemDependencyMissing
 	}
 	req, err := http.NewRequest(http.MethodPost, processURL, &buf)
 	if err != nil {
-		return nil, err
+		return nil, err, FailureReasonOther
 	}
 	req.Header.Set("User-Agent", "veritone-engine-toolkit")
 	req.Header.Set("Content-Type", w.FormDataContentType())
-	return req, nil
+	return req, nil, ""
 }

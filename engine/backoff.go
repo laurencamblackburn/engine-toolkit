@@ -7,7 +7,7 @@ import (
 
 type retrier interface {
 	// Do executes the function doing retries in case it returns an error
-	Do(f func() error) error
+	Do(f func() (error, TaskFailureReason )) (error, TaskFailureReason)
 }
 
 type doubleTimeBackoff struct {
@@ -32,17 +32,17 @@ func newDoubleTimeBackoff(initialBackoff, maxBackoff time.Duration, maxCalls int
 	}
 }
 
-func (b *doubleTimeBackoff) Do(f func() error) error {
+func (b *doubleTimeBackoff) Do(f func() (error, TaskFailureReason)) (error, TaskFailureReason) {
 	backoff := time.Duration(0)
 	calls := 0
 	for {
-		err := f()
+		err, reason := f()
 		if err == nil {
-			return nil
+			return nil, ""
 		}
 		calls++
 		if (calls >= b.maxCalls) && (b.maxCalls != 0) {
-			return err
+			return err, reason
 		}
 		switch {
 		case backoff == 0:
@@ -63,6 +63,6 @@ type nilBackoff struct{}
 func newNilBackoff() retrier {
 	return nilBackoff{}
 }
-func (nilBackoff) Do(f func() error) error {
+func (nilBackoff) Do(f func() (error, TaskFailureReason)) (error, TaskFailureReason) {
 	return f()
 }
