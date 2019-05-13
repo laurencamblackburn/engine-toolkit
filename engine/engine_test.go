@@ -58,7 +58,6 @@ func TestProcessingChunk(t *testing.T) {
 		err := engine.Run(ctx)
 		is.NoErr(err)
 	}()
-
 	inputMessage := mediaChunkMessage{
 		TimestampUTC:  time.Now().Unix(),
 		ChunkUUID:     "123",
@@ -332,6 +331,40 @@ func TestSubprocessCrash(t *testing.T) {
 	is.True(err != nil)
 	is.True(strings.Contains(err.Error(), "exit status 123"))
 
+}
+
+type engineOutput struct {
+	// SourceEngineID   string         `json:"sourceEngineId,omitempty"`
+	// SourceEngineName string         `json:"sourceEngineName,omitempty"`
+	// TaskPayload      payload        `json:"taskPayload,omitempty"`
+	// TaskID           string         `json:"taskId"`
+	// EntityID         string         `json:"entityId,omitempty"`
+	// LibraryID        string         `json:"libraryId"`
+	Series []seriesObject `json:"series"`
+}
+
+type seriesObject struct {
+	Start     int    `json:"startTimeMs"`
+	End       int    `json:"stopTimeMs"`
+	EntityID  string `json:"entityId"`
+	LibraryID string `json:"libraryId"`
+	Object    object `json:"object"`
+}
+
+type object struct {
+	Label        string   `json:"label"`
+	Text         string   `json:"text"`
+	ObjectType   string   `json:"type"`
+	URI          string   `json:"uri"`
+	EntityID     string   `json:"entityId,omitempty"`
+	LibraryID    string   `json:"libraryId,omitempty"`
+	Confidence   float64  `json:"confidence"`
+	BoundingPoly []coords `json:"boundingPoly"`
+}
+
+type coords struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
 }
 
 type engineOutputMessage struct {
