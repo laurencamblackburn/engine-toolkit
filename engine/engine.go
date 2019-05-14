@@ -121,7 +121,7 @@ func (e *Engine) runInference(ctx context.Context) error {
 				if !ok {
 					return
 				}
-				e.logDebug(fmt.Sprintf("message: topic:%q partition:%v offset:%v", msg.Topic, msg.Partition, msg.Offset))
+				//e.logDebug(fmt.Sprintf("message: topic:%q partition:%v offset:%v", msg.Topic, msg.Partition, msg.Offset))
 				e.consumer.MarkOffset(msg, "")
 				if err := e.processMessage(ctx, msg); err != nil {
 					e.logDebug(fmt.Sprintf("processing error: %v", err))
