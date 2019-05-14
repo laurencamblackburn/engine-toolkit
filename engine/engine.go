@@ -83,7 +83,6 @@ func (e *Engine) runSubprocessOnly(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, e.Config.Subprocess.Arguments[0], e.Config.Subprocess.Arguments[1:]...)
 	cmd.Stdout = e.Config.Stdout
 	cmd.Stderr = e.Config.Stderr
-	cmd.Stderr = e.Config.Stderr // TODO: deal with stderr
 	if err := cmd.Run(); err != nil {
 		return errors.Wrap(err, e.Config.Subprocess.Arguments[0])
 	}
