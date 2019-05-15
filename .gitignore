@@ -18,3 +18,4 @@ engine/examples/python_imagenet/dist/engine
 engine/engine
 
 .DS_Store
+.vscode
