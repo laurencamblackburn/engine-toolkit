@@ -83,7 +83,6 @@ func (e *Engine) runSubprocessOnly(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, e.Config.Subprocess.Arguments[0], e.Config.Subprocess.Arguments[1:]...)
 	cmd.Stdout = e.Config.Stdout
 	cmd.Stderr = e.Config.Stderr
-	cmd.Stderr = e.Config.Stderr // TODO: deal with stderr
 	if err := cmd.Run(); err != nil {
 		return errors.Wrap(err, e.Config.Subprocess.Arguments[0])
 	}
@@ -122,10 +121,11 @@ func (e *Engine) runInference(ctx context.Context) error {
 				if !ok {
 					return
 				}
+				//e.logDebug(fmt.Sprintf("message: topic:%q partition:%v offset:%v", msg.Topic, msg.Partition, msg.Offset))
+				e.consumer.MarkOffset(msg, "")
 				if err := e.processMessage(ctx, msg); err != nil {
 					e.logDebug(fmt.Sprintf("processing error: %v", err))
 				}
-				e.consumer.MarkOffset(msg, "")
 			case <-time.After(e.Config.EndIfIdleDuration):
 				e.logDebug(fmt.Sprintf("idle for %s", e.Config.EndIfIdleDuration))
 				return
