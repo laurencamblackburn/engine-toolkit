@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -11,6 +12,10 @@ import (
 	cluster "github.com/bsm/sarama-cluster"
 	"github.com/pkg/errors"
 )
+
+func init() {
+	sarama.Logger = log.New(os.Stdout, "[sarama] ", log.LstdFlags)
+}
 
 // Consumer consumes incoming messages.
 type Consumer interface {
