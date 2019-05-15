@@ -33,6 +33,7 @@ func newKafkaConsumer(brokers []string, group, topic string) (Consumer, func(), 
 	cleanup := func() {}
 	config := cluster.NewConfig()
 	config.Version = sarama.V1_1_0_0
+	config.ClientID = "veritone.engine-toolkit"
 	config.Consumer.Return.Errors = true
 	config.Consumer.Retry.Backoff = 1 * time.Second
 	config.Consumer.Offsets.Retry.Max = 5
