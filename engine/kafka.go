@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/bsm/sarama-cluster"
+	cluster "github.com/bsm/sarama-cluster"
 	"github.com/pkg/errors"
 )
 
@@ -40,6 +40,7 @@ func newKafkaConsumer(brokers []string, group, topic string) (Consumer, func(), 
 	config.Metadata.Retry.Max = 5
 	config.Metadata.Retry.Backoff = 1 * time.Second
 	config.Group.Mode = cluster.ConsumerModeMultiplex
+	config.Group.PartitionStrategy = cluster.StrategyRoundRobin
 	if err := config.Validate(); err != nil {
 		return nil, cleanup, errors.Wrap(err, "config")
 	}
@@ -57,7 +58,6 @@ func newKafkaConsumer(brokers []string, group, topic string) (Consumer, func(), 
 		return nil, cleanup, errors.Wrapf(err, "consumer (brokers: %s, group: %s, topic: %s)", strings.Join(brokers, ", "), group, topic)
 	}
 	go func() {
-		// TODO: where is the right place for this work?
 		for err := range consumer.Errors() {
 			log.Println("kafka: consumer:", err)
 		}
