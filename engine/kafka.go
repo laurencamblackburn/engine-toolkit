@@ -134,24 +134,27 @@ const (
 
 // chunkProcessedStatus - processing status of a chunk by stateless engines/conductors
 type chunkProcessedStatus struct {
-	Type         messageType `json:"type,omitempty"`         // always messageTypeChunkProcessedStatus
-	TimestampUTC int64       `json:"timestampUTC,omitempty"` // milliseconds since epoch
-	TaskID       string      `json:"taskId,omitempty"`       // Task ID the chunk belongs to
-	ChunkUUID    string      `json:"chunkUUID,omitempty"`    // UUID of chunk for which status is being reported
-	Status       chunkStatus `json:"status,omitempty"`       // Processed status
-	ErrorMsg     string      `json:"errorMsg,omitempty"`     // Optional error message in case of ERROR status
-	InfoMsg      string      `json:"infoMsg,omitempty"`      // Optional message for anything engine wishes to report
+	Type         messageType `json:"type,omitempty"`
+	TimestampUTC int64       `json:"timestampUTC,omitempty"`
+	TaskID       string      `json:"taskId,omitempty"`
+	ChunkUUID    string      `json:"chunkUUID,omitempty"`
+	Status       chunkStatus `json:"status,omitempty"`
+	ErrorMsg     string      `json:"errorMsg,omitempty"`
+	InfoMsg      string      `json:"infoMsg,omitempty"`
 }
 
 type chunkResult struct {
-	Type         messageType        `json:"type,omitempty"`         // always messageTypeChunkResult
-	TimestampUTC int64              `json:"timestampUTC,omitempty"` // milliseconds since epoch
-	TaskID       string             `json:"taskId,omitempty"`       // Task ID the chunk belongs to
-	ChunkUUID    string             `json:"chunkUUID,omitempty"`    // UUID of chunk for which status is being reported
-	Status       chunkStatus        `json:"status,omitempty"`       // Processed status
-	ErrorMsg     string             `json:"errorMsg,omitempty"`     // Optional error message in case of ERROR status
-	InfoMsg      string             `json:"infoMsg,omitempty"`      // Optional message for anything engine wishes to report
-	EngineOutput *mediaChunkMessage `json:"engineOutput,omitempty"` // Engine output when chunk processed successfully, nil otherwise
+	Type         messageType        `json:"type,omitempty"`
+	TimestampUTC int64              `json:"timestampUTC,omitempty"`
+	TaskID       string             `json:"taskId,omitempty"`
+	ChunkUUID    string             `json:"chunkUUID,omitempty"`
+	Status       chunkStatus        `json:"status,omitempty"`
+	InfoMsg      string             `json:"infoMsg,omitempty"`
+	EngineOutput *mediaChunkMessage `json:"engineOutput,omitempty"`
+
+	ErrorMsg      string `json:"errorMsg,omitempty"`
+	FailureReason string `json:"failureReason,omitempty`
+	FailureMsg    string `json:"failureMsg,omitempty"`
 }
 
 type payload struct {
