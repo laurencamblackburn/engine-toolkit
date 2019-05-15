@@ -201,6 +201,7 @@ func TestEndIfIdleDuration(t *testing.T) {
 	engine := NewEngine()
 	engine.Config.Subprocess.Arguments = []string{} // no subprocess
 	engine.Config.EndIfIdleDuration = 100 * time.Millisecond
+	engine.Config.Kafka.ReconnectAfterIdle = 50 * time.Millisecond
 	inputPipe := newPipe()
 	defer inputPipe.Close()
 	outputPipe := newPipe()

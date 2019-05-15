@@ -40,9 +40,8 @@ func TestKafkaIntegration(t *testing.T) {
 	is := is.New(t)
 	consumerGroup := "test-group-2"
 	topic := fmt.Sprintf("%v", time.Now().Unix())
-	consumer, cleanup, err := newKafkaConsumer([]string{"localhost:9092"}, consumerGroup, topic)
+	consumer, err := newKafkaConsumer([]string{"localhost:9092"}, consumerGroup, topic)
 	is.NoErr(err)
-	defer cleanup()
 	defer consumer.Close()
 	var wg sync.WaitGroup
 	go func() {

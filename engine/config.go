@@ -38,6 +38,9 @@ type Config struct {
 		InputTopic string
 		// ChunkTopic is the output topic where chunk results are sent.
 		ChunkTopic string
+		// ReconnectAfterIdle is the duration after which to reconnect
+		// the kafka consumer.
+		ReconnectAfterIdle time.Duration
 	}
 	// Webhooks holds webhook addresses.
 	Webhooks struct {
@@ -104,6 +107,7 @@ func NewConfig() Config {
 	c.Kafka.ConsumerGroup = os.Getenv("KAFKA_CONSUMER_GROUP")
 	c.Kafka.InputTopic = os.Getenv("KAFKA_INPUT_TOPIC")
 	c.Kafka.ChunkTopic = os.Getenv("KAFKA_CHUNK_TOPIC")
+	c.Kafka.ReconnectAfterIdle = 1 * time.Minute
 
 	return c
 }

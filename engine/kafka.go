@@ -29,8 +29,11 @@ type Producer interface {
 	SendMessage(msg *sarama.ProducerMessage) (partition int32, offset int64, err error)
 }
 
-func newKafkaConsumer(brokers []string, group, topic string) (Consumer, func(), error) {
-	cleanup := func() {}
+type kafkaConsumer struct{}
+
+// newKafkaConsumer makes and connects new Kafka Consumer.
+// Close must be called.
+func newKafkaConsumer(brokers []string, group, topic string) (Consumer, error) {
 	config := cluster.NewConfig()
 	config.Version = sarama.V1_1_0_0
 	config.ClientID = "veritone.engine-toolkit"
@@ -43,27 +46,22 @@ func newKafkaConsumer(brokers []string, group, topic string) (Consumer, func(), 
 	config.Group.Mode = cluster.ConsumerModeMultiplex
 	config.Group.PartitionStrategy = cluster.StrategyRoundRobin
 	if err := config.Validate(); err != nil {
-		return nil, cleanup, errors.Wrap(err, "config")
+		return nil, errors.Wrap(err, "config")
 	}
 	client, err := cluster.NewClient(brokers, config)
 	if err != nil {
-		return nil, cleanup, err
-	}
-	cleanup = func() {
-		if err := client.Close(); err != nil {
-			log.Println("kafka: consumer: client.Close:", err)
-		}
+		return nil, err
 	}
 	consumer, err := cluster.NewConsumerFromClient(client, group, []string{topic})
 	if err != nil {
-		return nil, cleanup, errors.Wrapf(err, "consumer (brokers: %s, group: %s, topic: %s)", strings.Join(brokers, ", "), group, topic)
+		return nil, errors.Wrapf(err, "consumer (brokers: %s, group: %s, topic: %s)", strings.Join(brokers, ", "), group, topic)
 	}
 	go func() {
 		for err := range consumer.Errors() {
 			log.Println("kafka: consumer:", err)
 		}
 	}()
-	return consumer, cleanup, nil
+	return consumer, nil
 }
 
 func newKafkaProducer(brokers []string) (Producer, error) {

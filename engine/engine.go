@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+
 // Engine consumes messages and calls webhooks to
 // fulfil the requests.
 type Engine struct {
@@ -40,18 +41,6 @@ func NewEngine() *Engine {
 		Config: NewConfig(),
 		client: http.DefaultClient,
 	}
-}
-
-// isTrainingTask gets whether the task is a training task or not.
-func isTrainingTask() (bool, error) {
-	payload, err := EnvPayload()
-	if err == ErrNoPayload {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return payload.Mode == "library-train", nil
 }
 
 // Run runs the Engine.
@@ -115,20 +104,33 @@ func (e *Engine) runInference(ctx context.Context) error {
 			e.logDebug("shutting down...")
 			cancel()
 		}()
+		var totalElapsedTime time.Duration // idle timer
 		for {
 			select {
 			case msg, ok := <-e.consumer.Messages():
 				if !ok {
-					return
+					return // finished successfully
 				}
-				//e.logDebug(fmt.Sprintf("message: topic:%q partition:%v offset:%v", msg.Topic, msg.Partition, msg.Offset))
+				totalElapsedTime = 0 // reset idle timer
+				e.logDebug(fmt.Sprintf("message: topic:%q partition:%v offset:%v", msg.Topic, msg.Partition, msg.Offset))
 				e.consumer.MarkOffset(msg, "")
 				if err := e.processMessage(ctx, msg); err != nil {
 					e.logDebug(fmt.Sprintf("processing error: %v", err))
 				}
-			case <-time.After(e.Config.EndIfIdleDuration):
-				e.logDebug(fmt.Sprintf("idle for %s", e.Config.EndIfIdleDuration))
-				return
+			case <-time.After(e.Config.Kafka.ReconnectAfterIdle):
+				e.logDebug(fmt.Sprintf("elapsed time: %v", e.Config.Kafka.ReconnectAfterIdle))
+				// check to see if we haven't heard anything in e.Config.EndIfIdleDuration
+				totalElapsedTime += e.Config.Kafka.ReconnectAfterIdle
+				if totalElapsedTime > e.Config.EndIfIdleDuration {
+					// we're done, we haven't had a message in e.Config.EndIfIdleDuration
+					e.logDebug(fmt.Sprintf("idle for %v (which is greater than %v)", totalElapsedTime, e.Config.EndIfIdleDuration))
+					return
+				}
+				//  reconnect the kafka consumer
+				if err := e.reconnectConsumer(); err != nil {
+					e.logDebug("reconnecting kafka consumer: " + err.Error())
+					return
+				}
 			case <-ctx.Done():
 				return
 			}
@@ -287,6 +289,34 @@ func (e *Engine) ready(ctx context.Context) error {
 		return nil
 	}
 }
+
+// reconnectConsumer closes the Consumer and creates a new one.
+func (e *Engine) reconnectConsumer() error {
+	e.logDebug("reconnecting kafka consumer...")
+	if err := e.consumer.Close(); err != nil {
+		e.logDebug(fmt.Sprintf("kafka: consumer: client.Close: %s", err))
+	}
+	var err error
+	e.consumer, err = newKafkaConsumer(e.Config.Kafka.Brokers, e.Config.Kafka.ConsumerGroup, e.Config.Kafka.InputTopic)
+	if err != nil {
+		return errors.Wrap(err, "kafka consumer")
+	}
+	e.logDebug("kafka consumer connected")
+	return nil
+}
+
+// isTrainingTask gets whether the task is a training task or not.
+func isTrainingTask() (bool, error) {
+	payload, err := EnvPayload()
+	if err == ErrNoPayload {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return payload.Mode == "library-train", nil
+}
+
 
 func nolog(args ...interface{}) {}
 

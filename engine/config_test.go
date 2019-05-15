@@ -27,6 +27,7 @@ func TestNewConfig(t *testing.T) {
 	is.Equal(config.Kafka.Brokers[1], "1.1.1.1:9092")
 	is.Equal(config.Kafka.ConsumerGroup, "consumer-group")
 	is.Equal(config.Kafka.InputTopic, "input-topic")
+	is.Equal(config.Kafka.ReconnectAfterIdle, 1*time.Minute)
 	is.Equal(config.EndIfIdleDuration, 1*time.Minute)
 	is.Equal(config.Stdout, os.Stdout)
 	is.Equal(config.Stderr, os.Stderr)
@@ -34,7 +35,7 @@ func TestNewConfig(t *testing.T) {
 	is.Equal(config.Subprocess.ReadyTimeout, 1*time.Minute)
 
 	// backoff
-	is.Equal(config.Webhooks.Backoff.MaxRetries, 10)
+	is.Equal(config.Webhooks.Backoff.MaxRetries, 3)
 	is.Equal(config.Webhooks.Backoff.InitialBackoffDuration, 100*time.Millisecond)
 	is.Equal(config.Webhooks.Backoff.MaxBackoffDuration, 1*time.Second)
 }

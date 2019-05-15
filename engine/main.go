@@ -61,12 +61,16 @@ func run(ctx context.Context) error {
 		eng.logDebug("input topic:", eng.Config.Kafka.InputTopic)
 		eng.logDebug("chunk topic:", eng.Config.Kafka.ChunkTopic)
 		var err error
-		var cleanup func()
-		eng.consumer, cleanup, err = newKafkaConsumer(eng.Config.Kafka.Brokers, eng.Config.Kafka.ConsumerGroup, eng.Config.Kafka.InputTopic)
+		eng.consumer, err = newKafkaConsumer(eng.Config.Kafka.Brokers, eng.Config.Kafka.ConsumerGroup, eng.Config.Kafka.InputTopic)
 		if err != nil {
 			return errors.Wrap(err, "kafka consumer")
 		}
-		defer cleanup()
+		defer func(){
+			if err := eng.consumer.Close(); err != nil {
+				eng.logDebug(fmt.Sprintf("kafka: consumer: client.Close: %s", err))
+			}
+		}()
+		eng.logDebug("kafka consumer connected")
 		eng.producer, err = newKafkaProducer(eng.Config.Kafka.Brokers)
 		if err != nil {
 			return errors.Wrap(err, "kafka producer")
