@@ -83,7 +83,7 @@ func NewConfig() Config {
 	c.Webhooks.Ready.PollDuration = 1 * time.Second
 	c.Webhooks.Ready.MaximumPollDuration = 1 * time.Minute
 	c.Webhooks.Process.URL = os.Getenv("VERITONE_WEBHOOK_PROCESS")
-	c.Webhooks.Backoff.MaxRetries = 10
+	c.Webhooks.Backoff.MaxRetries = 3
 	c.Webhooks.Backoff.InitialBackoffDuration = 100 * time.Millisecond
 	c.Webhooks.Backoff.MaxBackoffDuration = 1 * time.Second
 
