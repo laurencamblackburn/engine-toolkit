@@ -291,6 +291,8 @@ func (e *Engine) ready(ctx context.Context) error {
 }
 
 // reconnectConsumer closes the Consumer and creates a new one.
+// This call is not concurrent safe but since it is only called from within
+// the main select loop, it's ok.
 func (e *Engine) reconnectConsumer() error {
 	e.logDebug("reconnecting kafka consumer...")
 	if err := e.consumer.Close(); err != nil {
