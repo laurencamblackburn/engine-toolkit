@@ -205,34 +205,39 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		e.Config.Webhooks.Backoff.MaxRetries,
 	)
 	var content string
-	err, failureReason := retry.Do(func() (error, TaskFailureReason) {
+	var failureReason TaskFailureReason
+	err := retry.Do(func() error {
 		req, err, failReason := newRequestFromMediaChunk(e.client, e.Config.Webhooks.Process.URL, mediaChunk)
 		if err != nil {
-			return errors.Wrap(err, "new request"), failReason
+			failureReason = failReason
+			return errors.Wrap(err, "new request")
 		}
 		req = req.WithContext(ctx)
 		resp, err := e.client.Do(req)
 		if err != nil {
-			return err, FailureReasonAPIError
+			failureReason = FailureReasonAPIError
+			return err
 		}
 		defer resp.Body.Close()
 		var buf bytes.Buffer
 		if _, err := io.Copy(&buf, resp.Body); err != nil {
-			return errors.Wrap(err, "read body"), FailureReasonAPIError
+			failureReason = FailureReasonAPIError
+			return errors.Wrap(err, "read body")
 		}
 		if resp.StatusCode == http.StatusNoContent {
 			ignoreChunk = true
-			return nil, ""
+			return nil
 		}
 		if resp.StatusCode != http.StatusOK {
-			return errors.Errorf("%d: %s", resp.StatusCode, buf.String()), FailureReasonURLNotAllowed
+			failureReason = FailureReasonURLNotAllowed
+			return errors.Errorf("%d: %s", resp.StatusCode, buf.String())
 		}
 		if buf.Len() == 0 {
 			ignoreChunk = true
-			return nil, ""
+			return nil
 		}
 		content = buf.String()
-		return nil, ""
+		return nil
 	})
 	if err != nil {
 		// send error message
