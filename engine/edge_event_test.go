@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Shopify/sarama"
 	"github.com/matryer/is"
+	"math/rand"
 	"os"
 	"sync"
 	"testing"
@@ -39,4 +40,46 @@ func TestEdgeEventData(t *testing.T) {
 	})
 	is.NoErr(err)
 	wg.Wait()
+}
+// RandomEdgeEventData - creates an EdgeEventData message with random values
+func RandomEdgeEventData() EdgeEventData {
+	rand.Seed(time.Now().UnixNano())
+	return EdgeEventData{
+		Type:         EdgeEventDataType,
+		TimestampUTC: getCurrentTimeEpochMs(),
+		Event:        randomEvent(),
+		EventTimeUTC: getCurrentTimeEpochMs(),
+		Component:    uuidv4(),
+		JobID:        uuidv4(),
+		TaskID:       uuidv4(),
+		ChunkID:      uuidv4(),
+		EngineInfo: &EngineInfo{
+			EngineID:               uuidv4(),
+			BuildID:                uuidv4(),
+			InstanceID:             uuidv4(),
+			UpDurationSecs:         rand.Int63n(1e6),
+			ProcessingDurationSecs: rand.Int63n(1e6),
+			InstanceLimit:          rand.Int63n(1e6),
+			NoResourceErr:          "CPU Error",
+		},
+	}
+}
+
+func randomEvent() EdgeEvent {
+	switch rand.Intn(38) {
+	case 0:
+		return MediaChunkConsumed
+	case 1:
+		return ChunkResultProduced
+	case 2:
+		return EngineInstanceReady
+	case 3:
+		return EngineInstanceQuit
+	default:
+		return EngineInstancePeriodic
+	}
+}
+
+func uuidv4() string {
+	return "12345678-90ab-cdef-1234-567809ab"
 }

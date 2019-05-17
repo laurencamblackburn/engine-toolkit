@@ -68,13 +68,13 @@ type Config struct {
 			MaxBackoffDuration time.Duration
 		}
 	}
-	// ENGINE_INSTANCE_ID
+	// EngineInstanceID is ID's instance running the engine
 	EngineInstanceID string
-	// ENGINE_ID
+	// EngineID is ID's the engine
 	EngineID string
 	//periodically reporting total time (rounded to nearest second) engine instance has been and total time processing
 	TimeToSendPeriodicMessageInDuration string
-	// Name Topic send edge message
+	// EdgeEventTopic is the name topic send edge message
 	EdgeEventTopic string
 }
 

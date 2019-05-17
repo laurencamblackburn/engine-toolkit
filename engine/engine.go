@@ -29,10 +29,10 @@ type Engine struct {
 
 	// Config holds the Engine configuration.
 	Config Config
-	BuildID string
-	CurrentChunkID string
-	CurrentJobID string
-	CurrentTaskID string
+	buildID string
+	currentChunkID string
+	currentJobID string
+	currentTaskID string
 	engineInstanceStartedDate time.Time
 	lastReceivedDate time.Time
 	processingDurationSecs int64
@@ -202,9 +202,8 @@ func (e *Engine) runInference(ctx context.Context) error {
 		edgeMessage.EventTimeUTC = getCurrentTimeEpochMs()
 		edgeMessage.Component = e.Config.EngineID
 		edgeMessage.EngineInfo.EngineID = e.Config.EngineID
-		edgeMessage.EngineInfo.BuildID = e.BuildID
+		edgeMessage.EngineInfo.BuildID = e.buildID
 		edgeMessage.EngineInfo.InstanceID =  e.Config.EngineInstanceID
-		e.logDebug(newJSONEncoder(e.producer))
 		_, _, err := e.producer.SendMessage(&sarama.ProducerMessage{
 			Topic: e.Config.EdgeEventTopic,
 			Key:   sarama.ByteEncoder(e.Config.EngineID),
@@ -254,11 +253,11 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 	edgeMessage.Event = MediaChunkConsumed
 	edgeMessage.EventTimeUTC = getCurrentTimeEpochMs()
 	edgeMessage.Component = e.Config.EngineID
-	edgeMessage.JobID = e.CurrentJobID
-	edgeMessage.TaskID = e.CurrentTaskID
-	edgeMessage.ChunkID = e.CurrentChunkID
+	edgeMessage.JobID = e.currentJobID
+	edgeMessage.TaskID = e.currentTaskID
+	edgeMessage.ChunkID = e.currentChunkID
 	edgeMessage.EngineInfo.EngineID = e.Config.EngineID
-	edgeMessage.EngineInfo.BuildID = e.BuildID
+	edgeMessage.EngineInfo.BuildID = e.buildID
 	edgeMessage.EngineInfo.InstanceID =  e.Config.EngineInstanceID
 
 	_, _, errSend := e.producer.SendMessage(&sarama.ProducerMessage{
@@ -293,11 +292,11 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		edgeMessage.Event = ChunkResultProduced
 		edgeMessage.EventTimeUTC = getCurrentTimeEpochMs()
 		edgeMessage.Component = e.Config.EngineID
-		edgeMessage.JobID = e.CurrentJobID
-		edgeMessage.TaskID = e.CurrentTaskID
-		edgeMessage.ChunkID = e.CurrentChunkID
+		edgeMessage.JobID = e.currentJobID
+		edgeMessage.TaskID = e.currentTaskID
+		edgeMessage.ChunkID = e.currentChunkID
 		edgeMessage.EngineInfo.EngineID = e.Config.EngineID
-		edgeMessage.EngineInfo.BuildID = e.BuildID
+		edgeMessage.EngineInfo.BuildID = e.buildID
 		edgeMessage.EngineInfo.InstanceID =  e.Config.EngineInstanceID
 
 		_, _, er := e.producer.SendMessage(&sarama.ProducerMessage{
@@ -448,17 +447,17 @@ func (j *jsonEncoder) Length() int {
 	return len(j.b)
 }
 func setBuidEngine(e * Engine)  {
-	e.BuildID = strings.Replace(e.Config.Kafka.ChunkTopic, e.chunkInPrefix, "", -1)
+	e.buildID = strings.Replace(e.Config.Kafka.ChunkTopic, e.chunkInPrefix, "", -1)
 }
 func resetCurrentTask(e * Engine) {
-	e.CurrentJobID = ""
-	e.CurrentTaskID = ""
-	e.CurrentChunkID = ""
+	e.currentJobID = ""
+	e.currentTaskID = ""
+	e.currentChunkID = ""
 }
 func updateCurrentTask(e * Engine, job mediaChunkMessage) {
-	e.CurrentJobID = job.JobID
-	e.CurrentTaskID = job.TaskID
-	e.CurrentChunkID = job.ChunkUUID
+	e.currentJobID = job.JobID
+	e.currentTaskID = job.TaskID
+	e.currentChunkID = job.ChunkUUID
 }
 func updateProcessingDurationSecs(e * Engine) {
 	e.processingDurationSecs += int64(time.Now().Sub(e.lastReceivedDate).Seconds())
@@ -475,10 +474,10 @@ func timeEngineInstancePeriodic(e *Engine) {
 			edgeMessage.Event = EngineInstancePeriodic
 			edgeMessage.EventTimeUTC = getCurrentTimeEpochMs()
 			edgeMessage.Component = e.Config.EngineID
-			edgeMessage.JobID = e.CurrentJobID
-			edgeMessage.TaskID = e.CurrentTaskID
+			edgeMessage.JobID = e.currentJobID
+			edgeMessage.TaskID = e.currentTaskID
 			edgeMessage.EngineInfo.EngineID = e.Config.EngineID
-			edgeMessage.EngineInfo.BuildID = e.BuildID
+			edgeMessage.EngineInfo.BuildID = e.buildID
 			edgeMessage.EngineInfo.InstanceID =  e.Config.EngineInstanceID
 			edgeMessage.EngineInfo.ProcessingDurationSecs = e.processingDurationSecs
 			edgeMessage.EngineInfo.UpDurationSecs = int64(time.Now().Sub(e.engineInstanceStartedDate).Seconds())

@@ -81,7 +81,7 @@ func run(ctx context.Context) error {
 		edgeMessage.EventTimeUTC = getCurrentTimeEpochMs()
 		edgeMessage.Component = eng.Config.EngineID
 		edgeMessage.EngineInfo.EngineID = eng.Config.EngineID
-		edgeMessage.EngineInfo.BuildID = eng.BuildID
+		edgeMessage.EngineInfo.BuildID = eng.buildID
 		edgeMessage.EngineInfo.InstanceID =  eng.Config.EngineInstanceID
 
 		_, _, err = eng.producer.SendMessage(&sarama.ProducerMessage{

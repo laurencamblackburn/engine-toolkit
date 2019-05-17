@@ -26,7 +26,7 @@ func TestProcessingChunk(t *testing.T) {
 	engine.Config.Subprocess.Arguments = []string{} // no subprocess
 	engine.Config.Kafka.ChunkTopic = "chunk-topic"
 	engine.Config.EngineID = "engine-1"
-	engine.BuildID = "build-1"
+	engine.buildID = "build-1"
 	engine.logDebug = func(args ...interface{}) {}
 	inputPipe := newPipe()
 	defer inputPipe.Close()
