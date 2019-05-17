@@ -15,7 +15,7 @@ zookeeper-server-start /usr/local/etc/kafka/zookeeper.properties & kafka-server-
 Run the tests with:
 
 ```
-KAFKATEST=true go test -v ./...
+KAFKATEST=true GO111MODULE=on go test -v ./...
 ```
 
 ## TODO
@@ -28,3 +28,8 @@ KAFKATEST=true go test -v ./...
 
 * https://steel-ventures.atlassian.net/wiki/spaces/VT/pages/522453767/Message+Topics+Formats+and+Schema
 * https://steel-ventures.atlassian.net/wiki/spaces/VT/pages/718700686/Edge+Best+Practices+Common+Troubleshootings
+
+## Installing developer dependencies
+
+* Install Java with `brew cask install java`
+* Install Kafka with `brew install kafka`

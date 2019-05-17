@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/bsm/sarama-cluster"
+	cluster "github.com/bsm/sarama-cluster"
 	"github.com/pkg/errors"
 )
 
@@ -33,6 +33,7 @@ func newKafkaConsumer(brokers []string, group, topic string) (Consumer, func(), 
 	cleanup := func() {}
 	config := cluster.NewConfig()
 	config.Version = sarama.V1_1_0_0
+	config.ClientID = "veritone.engine-toolkit"
 	config.Consumer.Return.Errors = true
 	config.Consumer.Retry.Backoff = 1 * time.Second
 	config.Consumer.Offsets.Retry.Max = 5
@@ -40,6 +41,7 @@ func newKafkaConsumer(brokers []string, group, topic string) (Consumer, func(), 
 	config.Metadata.Retry.Max = 5
 	config.Metadata.Retry.Backoff = 1 * time.Second
 	config.Group.Mode = cluster.ConsumerModeMultiplex
+	config.Group.PartitionStrategy = cluster.StrategyRoundRobin
 	if err := config.Validate(); err != nil {
 		return nil, cleanup, errors.Wrap(err, "config")
 	}
@@ -57,7 +59,6 @@ func newKafkaConsumer(brokers []string, group, topic string) (Consumer, func(), 
 		return nil, cleanup, errors.Wrapf(err, "consumer (brokers: %s, group: %s, topic: %s)", strings.Join(brokers, ", "), group, topic)
 	}
 	go func() {
-		// TODO: where is the right place for this work?
 		for err := range consumer.Errors() {
 			log.Println("kafka: consumer:", err)
 		}
@@ -133,26 +134,27 @@ const (
 
 // chunkProcessedStatus - processing status of a chunk by stateless engines/conductors
 type chunkProcessedStatus struct {
-	Type         messageType `json:"type,omitempty"`         // Type is always messageTypeChunkProcessedStatus
-	TimestampUTC int64       `json:"timestampUTC,omitempty"` // TimestampUTC is milliseconds since epoch
-	TaskID       string      `json:"taskId,omitempty"`       // TaskID the chunk belongs to
-	ChunkUUID    string      `json:"chunkUUID,omitempty"`    // ChunkUUID of chunk for which status is being reported
-	Status       chunkStatus `json:"status,omitempty"`       // Status is processed status
-	ErrorMsg     string      `json:"errorMsg,omitempty"`     // ErrorMsg is optional error message in case of ERROR status
-	InfoMsg      string      `json:"infoMsg,omitempty"`      // InfoMsg is optional message for anything engine wishes to report
+	Type         messageType `json:"type,omitempty"`
+	TimestampUTC int64       `json:"timestampUTC,omitempty"`
+	TaskID       string      `json:"taskId,omitempty"`
+	ChunkUUID    string      `json:"chunkUUID,omitempty"`
+	Status       chunkStatus `json:"status,omitempty"`
+	ErrorMsg     string      `json:"errorMsg,omitempty"`
+	InfoMsg      string      `json:"infoMsg,omitempty"`
 }
 
 type chunkResult struct {
-	Type          messageType        `json:"type,omitempty"`          // Type is always messageTypeChunkResult
-	TimestampUTC  int64              `json:"timestampUTC,omitempty"`  // TimestampUTC is milliseconds since epoch
-	TaskID        string             `json:"taskId,omitempty"`        // TaskID the chunk belongs to
-	ChunkUUID     string             `json:"chunkUUID,omitempty"`     // ChunkUUID chunk for which status is being reported
-	Status        chunkStatus        `json:"status,omitempty"`        // Status is processed status
-	ErrorMsg      string             `json:"errorMsg,omitempty"`      // ErrorMsg is optional error message in case of ERROR status
-	InfoMsg       string             `json:"infoMsg,omitempty"`       // InfoMsg is optional message for anything engine wishes to report
-	FailureReason TaskFailureReason  `json:"failureReason,omitempty"` // FailureReason is Failure reason code when status is ERROR
-	FailureMsg    string             `json:"failureMsg,omitempty"`    // FailureMsg is Supplemental/context data for failure reason
-	EngineOutput  *mediaChunkMessage `json:"engineOutput,omitempty"`  // EngineOutput is Engine output when chunk processed successfully, nil otherwise
+	Type         messageType        `json:"type,omitempty"`
+	TimestampUTC int64              `json:"timestampUTC,omitempty"`
+	TaskID       string             `json:"taskId,omitempty"`
+	ChunkUUID    string             `json:"chunkUUID,omitempty"`
+	Status       chunkStatus        `json:"status,omitempty"`
+	InfoMsg      string             `json:"infoMsg,omitempty"`
+	EngineOutput *mediaChunkMessage `json:"engineOutput,omitempty"`
+
+	ErrorMsg      string `json:"errorMsg,omitempty"`
+	FailureReason string `json:"failureReason,omitempty`
+	FailureMsg    string `json:"failureMsg,omitempty"`
 }
 
 type payload struct {

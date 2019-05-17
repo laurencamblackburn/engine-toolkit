@@ -60,7 +60,6 @@ func TestProcessingChunk(t *testing.T) {
 		err := engine.Run(ctx)
 		is.NoErr(err)
 	}()
-
 	inputMessage := mediaChunkMessage{
 		TimestampUTC:  time.Now().Unix(),
 		ChunkUUID:     "123",
@@ -129,6 +128,79 @@ func TestProcessingChunk(t *testing.T) {
 	is.Equal(len(output.Series), 1)
 	is.Equal(output.Series[0].Object.Label, "something")
 	is.Equal(inputPipe.Offset, int64(1)) // Offset
+}
+
+// TestProcessingChunkError tests the entire end to end flow of processing
+// a chunk simulating an error from the Process webhook.
+func TestProcessingChunkError(t *testing.T) {
+	is := is.New(t)
+
+	engine := NewEngine()
+	engine.Config.Subprocess.Arguments = []string{} // no subprocess
+	engine.Config.Kafka.ChunkTopic = "chunk-topic"
+	engine.Config.Webhooks.Backoff.MaxRetries = 1
+	engine.logDebug = func(args ...interface{}) {}
+	inputPipe := newPipe()
+	defer inputPipe.Close()
+	outputPipe := newPipe()
+	defer outputPipe.Close()
+	engine.consumer = inputPipe
+	engine.producer = outputPipe
+	readySrv := newOKServer()
+	defer readySrv.Close()
+	engine.Config.Webhooks.Ready.URL = readySrv.URL
+	processSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+	}))
+	defer processSrv.Close()
+	engine.Config.Webhooks.Process.URL = processSrv.URL
+
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go func() {
+		err := engine.Run(ctx)
+		is.NoErr(err)
+	}()
+	inputMessage := mediaChunkMessage{
+		TimestampUTC:  time.Now().Unix(),
+		ChunkUUID:     "123",
+		Type:          messageTypeMediaChunk,
+		StartOffsetMS: 1000,
+		EndOffsetMS:   2000,
+		JobID:         "job1",
+		TDOID:         "tdo1",
+		TaskID:        "task1",
+	}
+	_, _, err := inputPipe.SendMessage(&sarama.ProducerMessage{
+		Offset: 1,
+		Key:    sarama.StringEncoder(inputMessage.TaskID),
+		Value:  newJSONEncoder(inputMessage),
+	})
+	is.NoErr(err)
+
+	var outputMsg *sarama.ConsumerMessage
+	var chunkResult chunkResult
+
+	// read the chunk success message
+	select {
+	case outputMsg = <-outputPipe.Messages():
+	case <-time.After(1 * time.Second):
+		is.Fail() // timed out
+		return
+	}
+	is.Equal(string(outputMsg.Key), inputMessage.TaskID)      // output message key must be TaskID
+	is.Equal(outputMsg.Topic, engine.Config.Kafka.ChunkTopic) // chunk topic
+	err = json.Unmarshal(outputMsg.Value, &chunkResult)
+	is.NoErr(err)
+	is.Equal(chunkResult.ErrorMsg, "500: Something went wrong")
+	is.Equal(chunkResult.Type, messageTypeChunkResult)
+	is.Equal(chunkResult.TaskID, inputMessage.TaskID)
+	is.Equal(chunkResult.ChunkUUID, inputMessage.ChunkUUID)
+	is.Equal(chunkResult.Status, chunkStatusError)
+	is.Equal(chunkResult.FailureReason, "internal_error")
+	is.Equal(chunkResult.FailureMsg, "500: Something went wrong")
+	is.True(chunkResult.EngineOutput == nil)
 }
 
 func TestReadiness(t *testing.T) {
@@ -364,6 +436,40 @@ func TestSubprocessCrash(t *testing.T) {
 	is.True(err != nil)
 	is.True(strings.Contains(err.Error(), "exit status 123"))
 
+}
+
+type engineOutput struct {
+	// SourceEngineID   string         `json:"sourceEngineId,omitempty"`
+	// SourceEngineName string         `json:"sourceEngineName,omitempty"`
+	// TaskPayload      payload        `json:"taskPayload,omitempty"`
+	// TaskID           string         `json:"taskId"`
+	// EntityID         string         `json:"entityId,omitempty"`
+	// LibraryID        string         `json:"libraryId"`
+	Series []seriesObject `json:"series"`
+}
+
+type seriesObject struct {
+	Start     int    `json:"startTimeMs"`
+	End       int    `json:"stopTimeMs"`
+	EntityID  string `json:"entityId"`
+	LibraryID string `json:"libraryId"`
+	Object    object `json:"object"`
+}
+
+type object struct {
+	Label        string   `json:"label"`
+	Text         string   `json:"text"`
+	ObjectType   string   `json:"type"`
+	URI          string   `json:"uri"`
+	EntityID     string   `json:"entityId,omitempty"`
+	LibraryID    string   `json:"libraryId,omitempty"`
+	Confidence   float64  `json:"confidence"`
+	BoundingPoly []coords `json:"boundingPoly"`
+}
+
+type coords struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
 }
 
 type engineOutputMessage struct {
