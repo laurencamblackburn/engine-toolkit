@@ -182,6 +182,16 @@ func TestProcessingChunkError(t *testing.T) {
 	var outputMsg *sarama.ConsumerMessage
 	var chunkResult chunkResult
 
+	// read the media_chunk_consumed success message
+	select {
+	case outputMsg = <-outputPipe.Messages():
+	case <-time.After(1 * time.Second):
+		is.Fail() // timed out
+		return
+	}
+	is.Equal(outputMsg.Topic, engine.Config.EdgeEventTopic)  // edge event topic
+	is.Equal(string(outputMsg.Key), inputMessage.ChunkUUID)  // chunk input
+
 	// read the chunk success message
 	select {
 	case outputMsg = <-outputPipe.Messages():
