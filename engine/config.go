@@ -10,8 +10,11 @@ import (
 
 // Config holds engine configuration settings.
 type Config struct {
+	// Engine contains engine specific configuration and information.
 	Engine struct {
-		ID         string
+		// ID is the identifier for this engine.
+		ID string
+		// InstanceID is the instance ID for this running instance.
 		InstanceID string
 		// EndIfIdleDuration is the duration after the last message
 		// at which point the engine will shut down.
@@ -74,7 +77,10 @@ type Config struct {
 			MaxBackoffDuration time.Duration
 		}
 	}
+	// Events contains system event configuration.
 	Events struct {
+		// PeriodicUpdateDuration is the interval at which to
+		// send periodic updates during processing.
 		PeriodicUpdateDuration time.Duration
 	}
 }
