@@ -153,7 +153,7 @@ type chunkResult struct {
 	EngineOutput *mediaChunkMessage `json:"engineOutput,omitempty"`
 
 	ErrorMsg      string `json:"errorMsg,omitempty"`
-	FailureReason string `json:"failureReason,omitempty`
+	FailureReason string `json:"failureReason,omitempty"`
 	FailureMsg    string `json:"failureMsg,omitempty"`
 }
 
