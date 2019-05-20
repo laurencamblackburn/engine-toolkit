@@ -10,9 +10,13 @@ import (
 
 // Config holds engine configuration settings.
 type Config struct {
-	// EndIfIdleDuration is the duration after the last message
-	// at which point the engine will shut down.
-	EndIfIdleDuration time.Duration
+	Engine struct {
+		ID         string
+		InstanceID string
+		// EndIfIdleDuration is the duration after the last message
+		// at which point the engine will shut down.
+		EndIfIdleDuration time.Duration
+	}
 	// Stdout is the Engine's stdout. Subprocesses inherit this.
 	Stdout io.Writer
 	// Stderr is the Engine's stderr. Subprocesses inherit this.
@@ -38,6 +42,8 @@ type Config struct {
 		InputTopic string
 		// ChunkTopic is the output topic where chunk results are sent.
 		ChunkTopic string
+		// EventTopic is the topic to push events like metrics and timing information
+		EventTopic string
 	}
 	// Webhooks holds webhook addresses.
 	Webhooks struct {
@@ -68,6 +74,9 @@ type Config struct {
 			MaxBackoffDuration time.Duration
 		}
 	}
+	Events struct {
+		PeriodicUpdateDuration time.Duration
+	}
 }
 
 // NewConfig gets default configuration settings.
@@ -78,6 +87,9 @@ func NewConfig() Config {
 	c.Subprocess.ReadyTimeout = 1 * time.Minute
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
+
+	c.Engine.InstanceID = os.Getenv("ENGINE_INSTANCE_ID")
+	c.Engine.ID = os.Getenv("ENGINE_ID")
 
 	c.Webhooks.Ready.URL = os.Getenv("VERITONE_WEBHOOK_READY")
 	c.Webhooks.Ready.PollDuration = 1 * time.Second
@@ -90,20 +102,23 @@ func NewConfig() Config {
 	// veritone platform configuration
 	if endSecs := os.Getenv("END_IF_IDLE_SECS"); endSecs != "" {
 		var err error
-		c.EndIfIdleDuration, err = time.ParseDuration(endSecs + "s")
+		c.Engine.EndIfIdleDuration, err = time.ParseDuration(endSecs + "s")
 		if err != nil {
 			log.Printf("END_IF_IDLE_SECS %q: %v", endSecs, err)
 		}
 	}
-	if c.EndIfIdleDuration == 0 {
-		c.EndIfIdleDuration = 1 * time.Minute
+	if c.Engine.EndIfIdleDuration == 0 {
+		c.Engine.EndIfIdleDuration = 1 * time.Minute
 	}
-
 	// kafka configuration
 	c.Kafka.Brokers = strings.Split(os.Getenv("KAFKA_BROKERS"), ",")
 	c.Kafka.ConsumerGroup = os.Getenv("KAFKA_CONSUMER_GROUP")
 	c.Kafka.InputTopic = os.Getenv("KAFKA_INPUT_TOPIC")
 	c.Kafka.ChunkTopic = os.Getenv("KAFKA_CHUNK_TOPIC")
+
+	// fixed parameters for event info
+	c.Kafka.EventTopic = "events"
+	c.Events.PeriodicUpdateDuration = 1 * time.Minute
 
 	return c
 }

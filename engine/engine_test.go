@@ -273,7 +273,7 @@ func TestEndIfIdleDuration(t *testing.T) {
 	defer cancel()
 	engine := NewEngine()
 	engine.Config.Subprocess.Arguments = []string{} // no subprocess
-	engine.Config.EndIfIdleDuration = 100 * time.Millisecond
+	engine.Config.Engine.EndIfIdleDuration = 100 * time.Millisecond
 	inputPipe := newPipe()
 	defer inputPipe.Close()
 	outputPipe := newPipe()

@@ -30,6 +30,10 @@ type Engine struct {
 
 	// Config holds the Engine configuration.
 	Config Config
+
+	// processing time
+	processingDurationLock sync.RWMutex
+	processingDuration     time.Duration
 }
 
 // NewEngine makes a new Engine with the specified Consumer and Producer.
@@ -111,9 +115,18 @@ func (e *Engine) runInference(ctx context.Context) error {
 		}
 	}
 	e.logDebug("waiting for messages...")
+	e.sendEvent(event{
+		Key:  e.Config.Engine.ID,
+		Type: eventStart,
+	})
+	go e.sendPeriodicEvents(ctx)
 	go func() {
 		defer func() {
 			e.logDebug("shutting down...")
+			e.sendEvent(event{
+				Key:  e.Config.Engine.ID,
+				Type: eventStop,
+			})
 			cancel()
 		}()
 		for {
@@ -127,8 +140,8 @@ func (e *Engine) runInference(ctx context.Context) error {
 				if err := e.processMessage(ctx, msg); err != nil {
 					e.logDebug(fmt.Sprintf("processing error: %v", err))
 				}
-			case <-time.After(e.Config.EndIfIdleDuration):
-				e.logDebug(fmt.Sprintf("idle for %s", e.Config.EndIfIdleDuration))
+			case <-time.After(e.Config.Engine.EndIfIdleDuration):
+				e.logDebug(fmt.Sprintf("idle for %s", e.Config.Engine.EndIfIdleDuration))
 				return
 			case <-ctx.Done():
 				return
@@ -153,6 +166,12 @@ func (e *Engine) runInference(ctx context.Context) error {
 }
 
 func (e *Engine) processMessage(ctx context.Context, msg *sarama.ConsumerMessage) error {
+	start := time.Now()
+	defer func() {
+		now := time.Now()
+		e.addProcessingTime(now.Sub(start))
+	}()
+
 	var typeCheck struct {
 		Type messageType
 	}
@@ -176,6 +195,14 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 	if err := json.Unmarshal(msg.Value, &mediaChunk); err != nil {
 		return errors.Wrap(err, "unmarshal message value JSON")
 	}
+	e.sendEvent(event{
+		Key:     mediaChunk.ChunkUUID,
+		Type:    eventConsumed,
+		JobID:   mediaChunk.JobID,
+		TaskID:  mediaChunk.TaskID,
+		ChunkID: mediaChunk.ChunkUUID,
+	})
+
 	finalUpdateMessage := chunkResult{
 		Type:      messageTypeChunkResult,
 		TaskID:    mediaChunk.TaskID,
@@ -193,6 +220,13 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 		if err != nil {
 			e.logDebug("WARN", "failed to send final chunk update:", err)
 		}
+		e.sendEvent(event{
+			Key:     mediaChunk.ChunkUUID,
+			Type:    eventProduced,
+			JobID:   mediaChunk.JobID,
+			TaskID:  mediaChunk.TaskID,
+			ChunkID: mediaChunk.ChunkUUID,
+		})
 	}()
 	ignoreChunk := false
 	retry := newDoubleTimeBackoff(
@@ -288,6 +322,18 @@ func (e *Engine) ready(ctx context.Context) error {
 		e.logDebug("ready: yes")
 		return nil
 	}
+}
+
+func (e *Engine) ProcessingDuration() time.Duration {
+	e.processingDurationLock.RLock()
+	defer e.processingDurationLock.RUnlock()
+	return e.processingDuration
+}
+
+func (e *Engine) addProcessingTime(d time.Duration) {
+	e.processingDurationLock.Lock()
+	defer e.processingDurationLock.Unlock()
+	e.processingDuration += d
 }
 
 func nolog(args ...interface{}) {}
