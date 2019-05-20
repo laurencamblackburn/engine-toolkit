@@ -324,12 +324,14 @@ func (e *Engine) ready(ctx context.Context) error {
 	}
 }
 
+// ProcessingDuration gets the current processing duration.
 func (e *Engine) ProcessingDuration() time.Duration {
 	e.processingDurationLock.RLock()
 	defer e.processingDurationLock.RUnlock()
 	return e.processingDuration
 }
 
+// addProcessingTime adds the d to the current processing duration.
 func (e *Engine) addProcessingTime(d time.Duration) {
 	e.processingDurationLock.Lock()
 	defer e.processingDurationLock.Unlock()
