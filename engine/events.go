@@ -80,6 +80,10 @@ func (e *Engine) sendEvent(evt event) {
 }
 
 func (e *Engine) sendPeriodicEvents(ctx context.Context) {
+	if e.Config.Events.PeriodicUpdateDuration == 0 {
+		e.logDebug("(skipping) sendPeriodicEvents because Config.Events.PeriodicUpdateDuration == 0")
+		return
+	}
 	start := time.Now()
 	for {
 		select {

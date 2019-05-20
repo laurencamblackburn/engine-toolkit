@@ -172,7 +172,6 @@ func (e *Engine) processMessage(ctx context.Context, msg *sarama.ConsumerMessage
 		now := time.Now()
 		e.addProcessingTime(now.Sub(start))
 	}()
-
 	var typeCheck struct {
 		Type messageType
 	}

@@ -25,13 +25,20 @@ func TestProcessingChunk(t *testing.T) {
 	engine := NewEngine()
 	engine.Config.Subprocess.Arguments = []string{} // no subprocess
 	engine.Config.Kafka.ChunkTopic = "chunk-topic"
-	engine.logDebug = func(args ...interface{}) {}
+	engine.Config.Engine.ID = "engineID"
+	engine.Config.Events.PeriodicUpdateDuration = 0
+	engine.logDebug = func(args ...interface{}) {
+		log.Println(args...)
+	}
 	inputPipe := newPipe()
 	defer inputPipe.Close()
 	outputPipe := newPipe()
 	defer outputPipe.Close()
+	outputEventsPipe := newPipe()
+	defer outputEventsPipe.Close()
 	engine.consumer = inputPipe
 	engine.producer = outputPipe
+	engine.eventProducer = outputEventsPipe
 	readySrv := newOKServer()
 	defer readySrv.Close()
 	engine.Config.Webhooks.Ready.URL = readySrv.URL
@@ -107,6 +114,51 @@ func TestProcessingChunk(t *testing.T) {
 	is.Equal(len(output.Series), 1)
 	is.Equal(output.Series[0].Object.Label, "something")
 	is.Equal(inputPipe.Offset, int64(1)) // Offset
+
+	// stop the engine
+	cancel()
+
+	// events
+	eventMsg, evt := popEvent(t, outputEventsPipe)
+	is.Equal(string(eventMsg.Key), "engineID")
+	is.Equal(evt.Type, eventType)   // event type
+	is.Equal(evt.Event, eventStart) // event name
+
+	eventMsg, evt = popEvent(t, outputEventsPipe)
+	is.Equal(string(eventMsg.Key), inputMessage.ChunkUUID)
+	is.Equal(evt.Type, eventType)                 // event type
+	is.Equal(evt.Event, eventConsumed)            // event name
+	is.Equal(evt.JobID, inputMessage.JobID)       // JobID
+	is.Equal(evt.TaskID, inputMessage.TaskID)     // TaskID
+	is.Equal(evt.ChunkID, inputMessage.ChunkUUID) // ChunkUUID
+
+	eventMsg, evt = popEvent(t, outputEventsPipe)
+	is.Equal(string(eventMsg.Key), inputMessage.ChunkUUID)
+	is.Equal(evt.Type, eventType)                 // event type
+	is.Equal(evt.Event, eventProduced)            // event name
+	is.Equal(evt.JobID, inputMessage.JobID)       // JobID
+	is.Equal(evt.TaskID, inputMessage.TaskID)     // TaskID
+	is.Equal(evt.ChunkID, inputMessage.ChunkUUID) // ChunkUUID
+
+	eventMsg, evt = popEvent(t, outputEventsPipe)
+	is.Equal(string(eventMsg.Key), "engineID")
+	is.Equal(evt.Type, eventType)  // event type
+	is.Equal(evt.Event, eventStop) // event name
+}
+
+func popEvent(t *testing.T, outputEventsPipe *pipe) (*sarama.ConsumerMessage, *edgeEvent) {
+	is := is.New(t)
+	var evt edgeEvent
+	var eventMsg *sarama.ConsumerMessage
+	select {
+	case eventMsg = <-outputEventsPipe.Messages():
+	case <-time.After(1 * time.Second):
+		is.Fail() // timed out waiting for event
+		return eventMsg, &evt
+	}
+	err := json.Unmarshal(eventMsg.Value, &evt)
+	is.NoErr(err)
+	return eventMsg, &evt
 }
 
 // TestProcessingChunkError tests the entire end to end flow of processing
