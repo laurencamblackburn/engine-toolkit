@@ -20,8 +20,9 @@ import (
 // Engine consumes messages and calls webhooks to
 // fulfil the requests.
 type Engine struct {
-	producer Producer
-	consumer Consumer
+	producer      Producer
+	eventProducer Producer
+	consumer      Consumer
 
 	testMode bool
 

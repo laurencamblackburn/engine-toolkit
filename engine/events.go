@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -44,8 +45,12 @@ type event struct {
 
 // sendEvent produces an event with fire and forget policy
 func (e *Engine) sendEvent(evt event) {
+	if e.eventProducer == nil {
+		e.logDebug(fmt.Sprintf("(skipping) sendEvent: %+v", evt))
+		return
+	}
+	e.logDebug(fmt.Sprintf("sendEvent: %+v", evt))
 	buildID := strings.Replace(e.Config.Kafka.ChunkTopic, "chunk_in_", "", -1)
-
 	now := int64(time.Now().UTC().UnixNano() / 1e6)
 	edgeEvt := edgeEvent{
 		Type:         eventType,
@@ -64,8 +69,7 @@ func (e *Engine) sendEvent(evt event) {
 		TaskID:  evt.TaskID,
 		ChunkID: evt.ChunkID,
 	}
-
-	_, _, err := e.producer.SendMessage(&sarama.ProducerMessage{
+	_, _, err := e.eventProducer.SendMessage(&sarama.ProducerMessage{
 		Topic: e.Config.Kafka.EventTopic,
 		Key:   sarama.ByteEncoder(evt.Key),
 		Value: newJSONEncoder(edgeEvt),
