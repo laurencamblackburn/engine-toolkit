@@ -24,21 +24,19 @@ const (
 	eventPeriodic = "engine_instance_up_periodic"
 )
 
-// event
+// event is an event that is sent to the platform.
 type event struct {
 	// Key for the topic
 	Key string
 	// Type of the event should be one of the constants
 	Type string
 
-	// produce/consume/periodic
-	JobID  string
-	TaskID string
-
-	// produce/consume
+	// for produce/consume events
+	JobID   string
+	TaskID  string
 	ChunkID string
 
-	// periodic
+	// for periodic events
 	ProcessingDurationSecs int64
 	UpDurationSecs         int64
 }
@@ -79,6 +77,8 @@ func (e *Engine) sendEvent(evt event) {
 	}
 }
 
+// sendPeriodicEvents sends the periodic events.
+// Cancellable via the context.
 func (e *Engine) sendPeriodicEvents(ctx context.Context) {
 	if e.Config.Events.PeriodicUpdateDuration == 0 {
 		e.logDebug("(skipping) sendPeriodicEvents because Config.Events.PeriodicUpdateDuration == 0")
