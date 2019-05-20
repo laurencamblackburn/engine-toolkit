@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -220,7 +221,7 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 			return nil
 		}
 		if resp.StatusCode != http.StatusOK {
-			return errors.Errorf("%d: %s", resp.StatusCode, buf.String())
+			return errors.Errorf("%d: %s", resp.StatusCode, strings.TrimSpace(buf.String()))
 		}
 		if buf.Len() == 0 {
 			ignoreChunk = true
@@ -231,9 +232,10 @@ func (e *Engine) processMessageMediaChunk(ctx context.Context, msg *sarama.Consu
 	})
 	if err != nil {
 		// send error message
-		err = errors.Wrapf(err, "SendMessage: %q %s %s", e.Config.Kafka.ChunkTopic, messageTypeChunkProcessedStatus, chunkStatusSuccess)
 		finalUpdateMessage.Status = chunkStatusError
 		finalUpdateMessage.ErrorMsg = err.Error()
+		finalUpdateMessage.FailureReason = "internal_error"
+		finalUpdateMessage.FailureMsg = finalUpdateMessage.ErrorMsg
 		return err
 	}
 	if ignoreChunk {
