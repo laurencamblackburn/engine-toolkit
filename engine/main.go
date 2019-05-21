@@ -71,6 +71,8 @@ func run(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "kafka producer")
 		}
+		// use the same producer for events
+		eng.eventProducer = eng.producer
 	} else {
 		eng.logDebug("skipping kafka setup")
 	}
