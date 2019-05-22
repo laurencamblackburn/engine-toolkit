@@ -18,12 +18,6 @@ Run the tests with:
 KAFKATEST=true GO111MODULE=on go test -v ./...
 ```
 
-## TODO
-
-- [ ] Strict response checking?
-- [ ] Kick off a test job?
-- [ ] CI 
-
 ## Resources
 
 * https://steel-ventures.atlassian.net/wiki/spaces/VT/pages/522453767/Message+Topics+Formats+and+Schema
